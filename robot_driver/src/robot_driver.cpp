@@ -20,7 +20,7 @@ void RobotDriver::button_input(const std_msgs::UInt8 &msg)
     if (msg.data == 1)
         correct_angle();
     else
-        ros::shutdown();
+        drive(1.0);
 }
 
 Wall RobotDriver::get_wall_()
@@ -97,14 +97,14 @@ bool RobotDriver::turn(bool clockwise, float radians)
     tf::StampedTransform start_transform;
     tf::StampedTransform current_transform;
 
-    // Record the starting transfrom from the laser to the base link
+    // Record the starting transfrom from the odometry to the base link
     listener_.lookupTransform("base_link", "odom",
         ros::Time(0), start_transform);
 
     // We will be sending commands of type "twist"
     geometry_msgs::Twist move;
 
-    // The command will be to turn at 0.5 rad/s
+    // The command will be to turn at turn_speed_ rad/s
     move.linear.x = move.linear.y = 0;
     move.angular.z = clockwise ? -turn_speed_ : turn_speed_;
 
@@ -150,6 +150,57 @@ bool RobotDriver::turn(bool clockwise, float radians)
 
     move.angular.z = 0;
     pub_cmd_vel_.publish(move);
+
+    return done;
+}
+
+bool RobotDriver::drive(float distance)
+{
+    // Wait for the listener to get the first message
+    listener_.waitForTransform("base_link", "odom",
+        ros::Time(0), ros::Duration(1.0));
+
+    // We will record transforms here
+    tf::StampedTransform start_transform;
+    tf::StampedTransform current_transform;
+
+    // Record the starting transform from the odometry to the base link
+    listener_.lookupTransform("base_link", "odom",
+        ros::Time(0), start_transform);
+
+    // We will be sending commands of type "twist"
+    geometry_msgs::Twist move;
+    // The command will be to go forward at 0.25 m/s
+    move.linear.y = move.angular.z = 0;
+    move.linear.x = 0.25;
+
+    ros::Rate rate(10);
+    bool done = false;
+    while (!done && nh_.ok())
+    {
+        // Send the drive command
+        pub_cmd_vel_.publish(move);
+        rate.sleep();
+
+        // Get the current transform
+        try
+        {
+            listener_.lookupTransform("base_link", "odom",
+                ros::Time(0), current_transform);
+        }
+        catch (tf::TransformException ex)
+        {
+            ROS_ERROR("%s", ex.what());
+            break;
+        }
+
+        // See how far we've reached
+        tf::Transform relative_transform =
+            start_transform.inverse() * current_transform;
+        float dist_moved = relative_transform.getOrigin().length();
+
+        if (dist_moved > distance) done = true;
+    }
 
     return done;
 }

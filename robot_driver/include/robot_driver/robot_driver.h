@@ -36,6 +36,8 @@ public:
     void correct_angle();
 
     bool turn(bool clockwise, float radians);
+
+    bool drive(float distance);
 };
 
 void sayHello();
