@@ -25,11 +25,12 @@ private:
     float scan_range_;
     float correction_threshold_;
     float turn_speed_;
+    float drive_speed_;
 
     Wall get_wall_();
 
 public:
-    RobotDriver(ros::NodeHandle nh, float scan_range, float correction_threshold, float turn_speed);
+    RobotDriver(ros::NodeHandle nh, float scan_range, float correction_threshold, float turn_speed, float drive_speed);
 
     void button_input(const std_msgs::UInt8 &msg);
 

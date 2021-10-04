@@ -18,6 +18,7 @@ int main(int argc, char **argv)
     float scan_range;
     float correction_threshold;
     float turn_speed;
+    float drive_speed;
 
     // ROS init
     ros::init(argc, argv, "robot_main_node");
@@ -36,9 +37,10 @@ int main(int argc, char **argv)
     nh.param<float>("/robot_driver/scan_range", scan_range, 3.0);
     nh.param<float>("/robot_driver/correction_threshold", correction_threshold, 0.1);
     nh.param<float>("/robot_driver/turn_speed", turn_speed, 0.5);
+    nh.param<float>("/robot_driver/drive_speed", drive_speed, 0.25);
 
     // RobotDriver init
-    RobotDriver rd(nh, scan_range, correction_threshold, turn_speed);
+    RobotDriver rd(nh, scan_range, correction_threshold, turn_speed, drive_speed);
 
     ros::Subscriber sub = nh.subscribe("/buttons", 1, &RobotDriver::button_input, &rd);
 

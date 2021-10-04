@@ -2,7 +2,7 @@
 
 const float pi = 3.14;
 
-RobotDriver::RobotDriver(ros::NodeHandle nh, float scan_range, float correction_threshold, float turn_speed)
+RobotDriver::RobotDriver(ros::NodeHandle nh, float scan_range, float correction_threshold, float turn_speed, float drive_speed)
 {
     if (scan_range < 0)
         scan_range = -scan_range;
@@ -11,6 +11,7 @@ RobotDriver::RobotDriver(ros::NodeHandle nh, float scan_range, float correction_
     scan_range_ = scan_range;
     correction_threshold_ = correction_threshold;
     turn_speed_ = turn_speed;
+    drive_speed_ = drive_speed;
 
     pub_cmd_vel_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
 }
@@ -170,9 +171,9 @@ bool RobotDriver::drive(float distance)
 
     // We will be sending commands of type "twist"
     geometry_msgs::Twist move;
-    // The command will be to go forward at 0.25 m/s
+    // The command will be to go forward at drive_speed_ m/s
     move.linear.y = move.angular.z = 0;
-    move.linear.x = 0.25;
+    move.linear.x = drive_speed_;
 
     ros::Rate rate(10);
     bool done = false;
