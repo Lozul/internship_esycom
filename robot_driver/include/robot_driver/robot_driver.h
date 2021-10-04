@@ -33,12 +33,51 @@ private:
 public:
     RobotDriver(ros::NodeHandle nh, float scan_range, float correction_threshold, float turn_speed, float drive_speed);
 
+    void set_scan_range(float scan_range)
+    {
+        scan_range_ = scan_range;
+    }
+
+    void set_correction_threshold(float correction_threshold)
+    {
+        correction_threshold_ = correction_threshold;
+    }
+
+    void set_turn_speed(float turn_speed)
+    {
+        turn_speed_ = turn_speed;
+    }
+
+    void set_drive_speed(float drive_speed)
+    {
+        drive_speed_ = drive_speed;
+    }
+
+    float get_scan_range(float scan_range)
+    {
+        return scan_range_;
+    }
+
+    float get_correction_threshold(float correction_threshold)
+    {
+        return correction_threshold_;
+    }
+
+    float get_turn_speed(float turn_speed)
+    {
+        return turn_speed_;
+    }
+
+    float get_drive_speed(float drive_speed)
+    {
+        return drive_speed_;
+    }
+
     void button_input(const std_msgs::UInt8 &msg);
 
     void correct_angle();
 
     bool turn(bool clockwise, float radians);
-
     bool drive(float distance);
 };
 
