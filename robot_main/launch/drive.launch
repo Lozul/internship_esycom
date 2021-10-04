@@ -14,6 +14,4 @@
 
     <node pkg="robot_main" type="robot_main_node" name="robot_main_node" output="screen" />
 
-    <node name="teleop_twist_keyboard" pkg="teleop_twist_keyboard" type="teleop_twist_keyboard.py" output="screen" />
-
 </launch>
