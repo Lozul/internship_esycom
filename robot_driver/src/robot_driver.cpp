@@ -202,6 +202,9 @@ bool RobotDriver::drive(float distance)
         if (dist_moved > distance) done = true;
     }
 
+    move.linear.x = 0;
+    pub_cmd_vel_.publish(move);
+
     return done;
 }
 
