@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdexcept>
 #include <ros/ros.h>
 #include <std_msgs/UInt8.h>
 #include <geometry_msgs/Twist.h>

@@ -14,6 +14,17 @@ RobotDriver::RobotDriver(ros::NodeHandle nh, float scan_range, float correction_
     drive_speed_ = drive_speed;
 
     pub_cmd_vel_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
+
+    // Wait for the listener to get the first message
+    ros::Duration timeout(10.0);
+    bool tf_ok = listener_.waitForTransform("base_link", "odom",
+        ros::Time(0), timeout);
+
+    if (!tf_ok)
+    {
+        ROS_ERROR("RobotDriver: TransformListener timed out after %i", timeout.sec);
+        throw std::runtime_error("timeout");
+    }
 }
 
 void RobotDriver::button_input(const std_msgs::UInt8 &msg)
@@ -74,7 +85,7 @@ void RobotDriver::correct_angle()
 
         if (correction < correction_threshold_ && -correction < correction_threshold_)
         {
-            ROS_INFO("RobotDriver: correction made or no correction to be made");
+            ROS_INFO("RobotDriver: correction made or no correction to be made (%.3f r)", correction);
             done = true;
             break;
         }
@@ -90,10 +101,6 @@ void RobotDriver::correct_angle()
 
 bool RobotDriver::turn(bool clockwise, float radians)
 {
-    // Wait for the listener to get the first message
-    listener_.waitForTransform("base_link", "odom",
-        ros::Time(0), ros::Duration(1.0));
-
     // We will record transforms here
     tf::StampedTransform start_transform;
     tf::StampedTransform current_transform;
@@ -157,10 +164,6 @@ bool RobotDriver::turn(bool clockwise, float radians)
 
 bool RobotDriver::drive(float distance)
 {
-    // Wait for the listener to get the first message
-    listener_.waitForTransform("base_link", "odom",
-        ros::Time(0), ros::Duration(1.0));
-
     // We will record transforms here
     tf::StampedTransform start_transform;
     tf::StampedTransform current_transform;
