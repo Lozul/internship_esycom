@@ -25,14 +25,7 @@ int main(int argc, char **argv)
     ros::NodeHandle nh("~");
     ros::Rate loop_rate(10);
     sayHello();
-
-    // Dynamic reconfigure
-    dynamic_reconfigure::Server<robot_driver::DriverConfig> server;
-    dynamic_reconfigure::Server<robot_driver::DriverConfig>::CallbackType f;
-
-    f = boost::bind(&callback, _1, _2);
-    server.setCallback(f);
-
+    
     // Get parameters
     nh.param<float>("/robot_driver/scan_range", scan_range, 3.0);
     nh.param<float>("/robot_driver/correction_threshold", correction_threshold, 0.1);
@@ -41,6 +34,13 @@ int main(int argc, char **argv)
 
     // RobotDriver init
     RobotDriver rd(nh, scan_range, correction_threshold, turn_speed, drive_speed);
+
+    // Dynamic reconfigure
+    dynamic_reconfigure::Server<robot_driver::DriverConfig> server;
+    dynamic_reconfigure::Server<robot_driver::DriverConfig>::CallbackType f;
+
+    f = boost::bind(&callback, _1, _2);
+    server.setCallback(f);
 
     ros::Subscriber sub = nh.subscribe("/buttons", 1, &RobotDriver::button_input, &rd);
 
