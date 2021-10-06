@@ -10,8 +10,7 @@ if __name__ == "__main__":
     client = dynamic_reconfigure.client.Client("robot_main_node", timeout=30)
 
     config = {
-        "scan_range": 2.5,
-        "correction_threshold": 0.05
+        "drive_speed": 0.1,
     }
 
     client.update_configuration(config)

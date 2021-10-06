@@ -1,16 +1,6 @@
 #include <ros/ros.h>
 #include <dynamic_reconfigure/server.h>
-#include <robot_driver/DriverConfig.h>
 #include "robot_driver/robot_driver.h"
-
-void callback(robot_driver::DriverConfig &config, uint32_t level)
-{
-    ROS_INFO("Reconfigure request:\n"
-        "\tscan_range: %.3f\n"
-        "\tcorrection_threshold: %.2f\n"
-        "\tturn_speed: %.3f",
-        config.scan_range, config.correction_threshold, config.turn_speed);
-}
 
 int main(int argc, char **argv)
 {
@@ -35,14 +25,13 @@ int main(int argc, char **argv)
     // RobotDriver init
     RobotDriver rd(nh, scan_range, correction_threshold, turn_speed, drive_speed);
 
-    // Dynamic reconfigure
+    ros::Subscriber sub = nh.subscribe("/buttons", 1, &RobotDriver::button_input, &rd);
+
     dynamic_reconfigure::Server<robot_driver::DriverConfig> server;
     dynamic_reconfigure::Server<robot_driver::DriverConfig>::CallbackType f;
 
-    f = boost::bind(&callback, _1, _2);
+    f = boost::bind(&RobotDriver::reconfigure, &rd, _1, _2);
     server.setCallback(f);
-
-    ros::Subscriber sub = nh.subscribe("/buttons", 1, &RobotDriver::button_input, &rd);
 
     while (nh.ok())
     {
