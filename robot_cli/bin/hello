@@ -1,0 +1,7 @@
+#! /usr/bin/env python3
+
+import robot_cli.hello
+
+
+if __name__ == "__main__":
+    robot_cli.hello.say('world!')
