@@ -10,6 +10,6 @@ catkin_python_setup()
 catkin_package()
 
 catkin_install_python(PROGRAMS
-  bin/hello
+  bin/cli
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
