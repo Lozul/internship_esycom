@@ -36,6 +36,31 @@ def cmd_show():
         print("\t{0}: {1} <{2}>".format(key, value, type(value).__name__))
 
 @register
+def cmd_set():
+    """Set a new value"""
+
+    try:
+        _, key, value = user_input.split(" ")
+    except ValueError:
+        pwarn("Usage: set <KEY> <VALUE>")
+        return
+
+    if key not in config.keys():
+        pwarn("Unknown key {0}".format(key))
+
+    value_type = type(config[key])
+    try:
+        update = {
+            key: value_type(value)
+        }
+
+        client.update_configuration(update)
+
+        print("Updated {0} value to {1}".format(key, value))
+    except ValueError:
+        pwarn("Invalid value for {0}, should be of type {1}, not {2}".format(name, value_type.__name__, type(value).__name__))
+
+@register
 def cmd_help():
     """Help function"""
 
@@ -54,7 +79,7 @@ def cmd_quit():
     exit(0)
 
 def main():
-    global client
+    global client, user_input
 
     rospy.init_node("dynamic_client")
 
