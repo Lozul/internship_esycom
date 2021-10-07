@@ -7,11 +7,6 @@ find_package(catkin REQUIRED COMPONENTS
     roscpp
     laser_geometry
     tf
-    dynamic_reconfigure
-)
-
-generate_dynamic_reconfigure_options(
-    cfg/Driver.cfg
 )
 
 catkin_package(
@@ -28,8 +23,6 @@ include_directories(
 add_library(${PROJECT_NAME}
     src/robot_driver.cpp
 )
-
-add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_gencfg)
 
 target_link_libraries(${PROJECT_NAME} ${catkin_LIBRARIES})
 

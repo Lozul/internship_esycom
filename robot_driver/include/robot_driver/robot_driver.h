@@ -6,7 +6,6 @@
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/LaserScan.h>
 #include <tf/transform_listener.h>
-#include <robot_driver/DriverConfig.h>
 
 struct Wall
 {
@@ -74,7 +73,7 @@ public:
         return drive_speed_;
     }
 
-    void reconfigure(robot_driver::DriverConfig &config, uint32_t level);
+    void reconfigure(float scan_range, float correction_threshold, float turn_speed, float drive_speed);
 
     void button_input(const std_msgs::UInt8 &msg);
 

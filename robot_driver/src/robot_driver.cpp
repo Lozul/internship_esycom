@@ -72,19 +72,19 @@ Wall RobotDriver::get_wall_()
     return wall;
 }
 
-void RobotDriver::reconfigure(robot_driver::DriverConfig &config, uint32_t level)
+void RobotDriver::reconfigure(float scan_range, float correction_threshold, float turn_speed, float drive_speed)
 {
-    ROS_DEBUG("RobotDriver: reconfigure request:\n"
+    ROS_INFO("RobotDriver: reconfigure request:\n"
         "\tscan_range: %.3f\n"
         "\tcorrection_threshold: %.2f\n"
         "\tturn_speed: %.3f\n"
         "\tdrive_speed: %.3f",
-        config.scan_range, config.correction_threshold, config.turn_speed, config.drive_speed);
+        scan_range, correction_threshold, turn_speed, drive_speed);
 
-    scan_range_ = config.scan_range;
-    correction_threshold_ = config.correction_threshold;
-    turn_speed_ = config.turn_speed;
-    drive_speed_ = config.drive_speed;
+    scan_range_ = scan_range;
+    correction_threshold_ = correction_threshold;
+    turn_speed_ = turn_speed;
+    drive_speed_ = drive_speed;
 }
 
 void RobotDriver::correct_angle()
