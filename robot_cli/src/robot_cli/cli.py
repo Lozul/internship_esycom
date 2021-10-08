@@ -56,6 +56,7 @@ def cmd_set():
 
     if key not in config.keys():
         pwarn("Unknown key {0}".format(key))
+        return
 
     value_type = type(config[key])
     try:
