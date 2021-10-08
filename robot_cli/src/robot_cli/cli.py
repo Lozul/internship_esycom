@@ -2,6 +2,7 @@ import rospy
 import dynamic_reconfigure.client
 from robot_cli.colors import *
 from std_msgs.msg import Bool
+from sensor_msgs.msg import BatteryState
 
 ## VARIABLES ##
 
@@ -90,6 +91,14 @@ def cmd_start():
 
     if len(user) == 0 or user.lower() == "y":
         pub_routine.publish(True)
+
+@register
+def cmd_battery():
+    """Show battery state"""
+
+    state = rospy.wait_for_message('/battery', BatteryState)
+
+    print("Voltage: {0:.2f}V (min is 9.6V)".format(state.voltage))
 
 @register
 def cmd_help():
