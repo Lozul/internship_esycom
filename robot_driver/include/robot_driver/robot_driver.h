@@ -31,6 +31,7 @@ private:
     Wall get_wall_();
 
 public:
+    RobotDriver(ros::NodeHandle nh);
     RobotDriver(ros::NodeHandle nh, float scan_range, float correction_threshold, float turn_speed, float drive_speed);
 
     void set_scan_range(float scan_range)

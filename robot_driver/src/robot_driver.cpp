@@ -2,6 +2,10 @@
 
 const float pi = 3.14;
 
+RobotDriver::RobotDriver(ros::NodeHandle nh)
+    : RobotDriver(nh, 0, 0, 0, 0)
+{}
+
 RobotDriver::RobotDriver(ros::NodeHandle nh, float scan_range, float correction_threshold, float turn_speed, float drive_speed)
 {
     if (scan_range < 0)

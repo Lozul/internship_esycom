@@ -1,7 +1,5 @@
 <launch>
 
-    <rosparam file="$(find robot_main)/config/params.yaml" />
-
     <env name="ROSCONSOLE_CONFIG_FILE" value="$(find robot_main)/custom_rosconsole.config" />
 
     <include file="$(find rosbot_ekf)/launch/all.launch">
