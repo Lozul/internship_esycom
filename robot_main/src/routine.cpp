@@ -11,10 +11,10 @@ Routine::Routine(RobotDriver &rd, int steps, float step_distance)
     step_distance_ = step_distance;
 }
 
-void Routine::reconfigure(robot_main::GeneralConfig &config, uint32_t level)
+void Routine::reconfigure(int steps, float step_distance)
 {
-    steps_ = config.steps;
-    step_distance_ = config.step_distance;
+    steps_ = steps;
+    step_distance_ = step_distance;
 }
 
 void Routine::start()
