@@ -78,7 +78,7 @@ Wall RobotDriver::get_wall_()
 
 void RobotDriver::reconfigure(float scan_range, float correction_threshold, float turn_speed, float drive_speed)
 {
-    ROS_INFO("RobotDriver: reconfigure request:\n"
+    ROS_DEBUG("RobotDriver: reconfigure request:\n"
         "\tscan_range: %.3f\n"
         "\tcorrection_threshold: %.2f\n"
         "\tturn_speed: %.3f\n"

@@ -1,6 +1,9 @@
-from robot_cli.colors import *
 import rospy
 import dynamic_reconfigure.client
+from robot_cli.colors import *
+from std_msgs.msg import Bool
+
+## VARIABLES ##
 
 VERSION = "0.1"
 
@@ -9,12 +12,18 @@ commands = dict()
 client = None
 config = None
 
+pub_routine = None
+
 user_input = ""
+
+## ROBOT FUNCTION ##
 
 def get_configuration():
     global config
 
     config = client.get_configuration()
+
+## COMMANDS ##
 
 def register(func):
     """Register a function as a command
@@ -61,6 +70,25 @@ def cmd_set():
         pwarn("Invalid value for {0}, should be of type {1}, not {2}".format(name, value_type.__name__, type(value).__name__))
 
 @register
+def cmd_start():
+    """Start routine"""
+
+    msg ="""
+    Routine settings
+    ----------------
+        steps: {0}
+        step_distance: {1} m
+    ------------------------
+    """
+
+    print(msg.format(config.steps, config.step_distance))
+
+    user = raw_input("Start routine (Y/n)? ")
+
+    if len(user) == 0 or user.lower() == "y":
+        pub_routine.publish(True)
+
+@register
 def cmd_help():
     """Help function"""
 
@@ -78,12 +106,18 @@ def cmd_quit():
 
     exit(0)
 
+## MAIN ##
+
 def main():
-    global client, user_input
+    global client, user_input, pub_routine
 
     rospy.init_node("dynamic_client")
 
+    pub_routine = rospy.Publisher('routine', Bool, queue_size=1)
+
     client = dynamic_reconfigure.client.Client("robot_main_node", timeout=30)
+
+    get_configuration()
 
     while True:
         # user_input = input(f"{good}> {endc}")
