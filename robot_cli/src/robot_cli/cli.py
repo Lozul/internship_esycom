@@ -73,6 +73,8 @@ def cmd_set():
 def cmd_start():
     """Start routine"""
 
+    get_configuration()
+
     msg ="""
     Routine settings
     ----------------
