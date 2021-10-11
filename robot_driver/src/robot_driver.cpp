@@ -183,46 +183,47 @@ bool RobotDriver::turn(bool clockwise, float radians)
 
 bool RobotDriver::drive(float distance)
 {
-    // We will record transforms here
-    tf::StampedTransform start_transform;
-    tf::StampedTransform current_transform;
+    // We will record position here
+    geometry_msgs::Point start_position;
+    geometry_msgs::Point current_position;
 
-    // Record the starting transform from the odometry to the base link
-    listener_.lookupTransform("base_link", "odom",
-        ros::Time(0), start_transform);
+    // Record the starting position
+    auto ptr = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("/pose");
 
-    // We will be sending commands of type "twist"
+    if (!ptr)
+    {
+        ROS_ERROR("RobotDriver: failed to record starting position");
+        return false;
+    }
+
+    start_position = ptr->pose.position;
+
+    // We will be sending commands of type `Twist`
     geometry_msgs::Twist move;
-    // The command will be to go forward at drive_speed_ m/s
     move.linear.y = move.angular.z = 0;
     move.linear.x = drive_speed_;
 
+    // Begin driving
     ros::Rate rate(10);
     bool done = false;
     while (!done && nh_.ok())
     {
-        // Send the drive command
         pub_cmd_vel_.publish(move);
         rate.sleep();
 
-        // Get the current transform
-        try
+        // Get the current position
+        auto ptr = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("/pose");
+
+        if (!ptr)
         {
-            listener_.lookupTransform("base_link", "odom",
-                ros::Time(0), current_transform);
-        }
-        catch (tf::TransformException ex)
-        {
-            ROS_ERROR("%s", ex.what());
-            break;
+            ROS_ERROR("RobotDriver: failed to get current position");
+            return false;
         }
 
-        // See how far we've reached
-        tf::Transform relative_transform =
-            start_transform.inverse() * current_transform;
-        float dist_moved = relative_transform.getOrigin().length();
+        current_position = ptr->pose.position;
+        float dist_moved = current_position.x - start_position.x;
 
-        if (dist_moved > distance) done = true;
+        if (dist_moved >= distance) done = true;
     }
 
     move.linear.x = 0;
