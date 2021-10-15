@@ -40,7 +40,14 @@ void RobotDriver::button_input(const std_msgs::UInt8 &msg)
         sensor_msgs::LaserScanConstPtr scan =
             ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
 
-        ROS_INFO("min: %f ; max %f", scan->angle_min, scan->angle_max);
+        int count = scan->scan_time / scan->time_increment;
+
+        ROS_INFO("Laser Scan:\n"
+            "\tangle_min: %f\n"
+            "\tangle_max: %f\n"
+            "\ttime_increment: %f\n"
+            "\tscan_time: %f\n"
+            "\trange.size: %d", scan->angle_min, scan->angle_max, scan->time_increment, scan->scan_time, scan->ranges.size());
     }
     else
         drive(1.0);
