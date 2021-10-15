@@ -3,10 +3,10 @@
 const float pi = 3.14;
 
 RobotDriver::RobotDriver(ros::NodeHandle nh)
-    : RobotDriver(nh, 0, 0, 0, 0)
+    : RobotDriver(nh, 0, 0, 0, 0, 0)
 {}
 
-RobotDriver::RobotDriver(ros::NodeHandle nh, float scan_range, float correction_threshold, float turn_speed, float drive_speed)
+RobotDriver::RobotDriver(ros::NodeHandle nh, float scan_range, float correction_threshold, float turn_speed, float drive_speed, float target_distance)
 {
     if (scan_range < 0)
         scan_range = -scan_range;
@@ -16,6 +16,7 @@ RobotDriver::RobotDriver(ros::NodeHandle nh, float scan_range, float correction_
     correction_threshold_ = correction_threshold;
     turn_speed_ = turn_speed;
     drive_speed_ = drive_speed;
+    target_distance_ = target_distance;
 
     pub_cmd_vel_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
 
@@ -34,49 +35,18 @@ RobotDriver::RobotDriver(ros::NodeHandle nh, float scan_range, float correction_
 void RobotDriver::button_input(const std_msgs::UInt8 &msg)
 {
     if (msg.data == 1)
-        correct_angle();
+    {
+        // correct_angle();
+        sensor_msgs::LaserScanConstPtr scan =
+            ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
+
+        ROS_INFO("min: %f ; max %f", scan->angle_min, scan->angle_max);
+    }
     else
         drive(1.0);
 }
 
-Wall RobotDriver::get_wall_()
-{
-    Wall wall;
-    
-    sensor_msgs::LaserScanConstPtr scan =
-        ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
-
-    if (!scan)
-    {
-        ROS_ERROR("RobotDriver: No scan message");
-    }
-
-    wall.range = scan->ranges[0];
-    wall.angle = scan->angle_min;
-
-    for (int i = 1; i < scan->ranges.size(); i++)
-    {
-        float range = scan->ranges[i];
-
-        if (range < scan->range_min || range > scan->range_max)
-            continue;
-
-        float angle = scan->angle_min + scan->angle_increment * i;
-
-        if (angle > -scan_range_ && angle < scan_range_)
-            continue;
-
-        if (wall.range > range)
-        {
-            wall.range = range;
-            wall.angle = angle;
-        }
-    }
-
-    return wall;
-}
-
-void RobotDriver::reconfigure(float scan_range, float correction_threshold, float turn_speed, float drive_speed)
+void RobotDriver::reconfigure(float scan_range, float correction_threshold, float turn_speed, float drive_speed, float target_distance)
 {
     ROS_DEBUG("RobotDriver: reconfigure request:\n"
         "\tscan_range: %.3f\n"
@@ -89,33 +59,129 @@ void RobotDriver::reconfigure(float scan_range, float correction_threshold, floa
     correction_threshold_ = correction_threshold;
     turn_speed_ = turn_speed;
     drive_speed_ = drive_speed;
+    target_distance_ = target_distance;
+}
+
+struct Point
+{
+    float angle;
+    float range;
+};
+
+bool compare_float(float a, float b)
+{
+    float epsilon = 0.1;
+    float diff = a - b;
+
+    return ((diff < epsilon) && (-diff < epsilon));
+}
+
+float find_border_angle(std::vector<Point> points, float target_distance, bool left)
+{
+    float epsilon = 0.5;
+    int i = left ? 0 : points.size() - 1;
+
+    while (true)
+    {
+        float cos_angle = std::cos(points[i].angle);
+        float range_min = std::abs((target_distance - epsilon) / cos_angle);
+        float range_max = std::abs((target_distance + epsilon) / cos_angle);
+
+        if (points[i].range < range_min || points[i].range > range_max)
+        {
+            i += left ? -1 : 1;
+            break;
+        }
+        else
+        {
+            i += left ? 1 : -1;
+        }
+    }
+
+    if ((left && i == -1) || (!left && i == points.size()))
+        return -1;
+
+    return points[i].angle;
 }
 
 void RobotDriver::correct_angle()
 {
-    bool done = false;
+    // Get laser data
+    ROS_INFO("RobotDriver: getting laser data...");
+    sensor_msgs::LaserScanConstPtr scan =
+        ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
 
-    while (!done && nh_.ok())
+    if (!scan)
     {
-        Wall wall = get_wall_();
-        ROS_DEBUG("RobotDriver: wall hit at %.3f [r] and %.3f [m]", wall.angle, wall.range);
-
-        float correction = (pi - std::abs(wall.angle)) * (wall.angle > 0 ? -1 : 1);
-
-        if (correction < correction_threshold_ && -correction < correction_threshold_)
-        {
-            ROS_INFO("RobotDriver: correction made or no correction to be made (%.3f r)", correction);
-            done = true;
-            break;
-        }
-
-        ROS_DEBUG("RobotDriver: angle to correction: %.3f [r]", correction);
-
-        if (turn(wall.angle > 0, correction))
-            ROS_DEBUG("RobotDriver: step correction made");
-        else
-            ROS_DEBUG("RobotDriver: step correction not completed");
+        ROS_ERROR("RobotDriver: no scan message");
+        return;
     }
+
+    // Filter laser data
+    ROS_INFO("RobotDriver: filtering laser data...");
+    std::vector<Point> points;
+
+    for (int i = 0; i < scan->ranges.size(); i++)
+    {
+        // Discard invalid values
+        float range = scan->ranges[0];
+
+        if (range < scan->range_min || range > scan->range_max)
+            continue;
+
+        // Discard values that are not in front of the robot
+        float angle = scan->angle_min + scan->angle_increment * i;
+
+        if (angle > -2.5 && angle < 2.5)
+            continue;
+
+        // Save valide point
+        points.push_back({angle, range});
+    }
+
+    if (points[0].angle > 0)
+    {
+        ROS_ERROR("RobotDriver: points are not sorted as expected");
+        return;
+    }
+
+    // Search target borders
+    ROS_INFO("RobotDriver: searching target left border...");
+    float left = find_border_angle(points, target_distance_, true);
+    ROS_INFO("RobotDriver: searching target right border...");
+    float right = find_border_angle(points, target_distance_, false);
+
+    ROS_INFO("RobotDriver: target found between %.3f and %.3f", left, right);
+
+    // Search correction angle
+    float mean_range = 0;
+    std::for_each(points.begin(), points.end(), [&mean_range](Point &p){ mean_range += p.range; });
+    mean_range /= points.size();
+
+    ROS_INFO("RobotDriver: mean range %.3f", mean_range);
+
+    Point target;
+
+    ROS_INFO("RobotDriver: searching correction point...");
+    for (auto p : points)
+    {
+        if ((p.angle <= left || p.angle >= right) && compare_float(p.range, mean_range))
+        {
+            target.angle = p.angle;
+            target.range = p.range;
+        }
+    }
+
+    float correction = (pi - std::abs(target.angle)) * (target.angle < 0 ? -1 : 1);
+
+    // Apply correction if needed
+    ROS_INFO("RobotDriver: applying correction");
+    if (correction > correction_threshold_ && correction < -correction_threshold_)
+    {
+        turn(target.angle > 0, correction);
+    }
+
+    ROS_INFO("RobotDriver: correction made or no correction to be made (%.3f rad)", correction);
 }
 
 bool RobotDriver::turn(bool clockwise, float radians)
@@ -204,6 +270,7 @@ bool RobotDriver::drive(float distance)
     move.linear.x = drive_speed_;
 
     // Begin driving
+    float dist_moved;
     ros::Rate rate(10);
     bool done = false;
     while (!done && nh_.ok())
@@ -221,13 +288,17 @@ bool RobotDriver::drive(float distance)
         }
 
         current_position = ptr->pose.position;
-        float dist_moved = current_position.x - start_position.x;
+        dist_moved = current_position.x - start_position.x;
 
         if (dist_moved >= distance) done = true;
     }
 
+    // Stop movement
     move.linear.x = 0;
     pub_cmd_vel_.publish(move);
+
+    // Update target distance
+    target_distance_ -= dist_moved;
 
     return done;
 }

@@ -9,7 +9,7 @@ bool execute_routine = false;
 
 void reconfigure(robot_main::GlobalConfig &config, uint32_t level, RobotDriver &rd, Routine &routine)
 {
-    rd.reconfigure(config.scan_range, config.correction_threshold, config.turn_speed, config.drive_speed);
+    rd.reconfigure(config.scan_range, config.correction_threshold, config.turn_speed, config.drive_speed, config.target_distance);
     routine.reconfigure(config.steps, config.step_distance);
 }
 

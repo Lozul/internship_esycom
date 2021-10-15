@@ -1,5 +1,8 @@
 #pragma once
 
+#include <cmath>
+#include <vector>
+#include <algorithm>
 #include <stdexcept>
 #include <ros/ros.h>
 #include <std_msgs/UInt8.h>
@@ -27,12 +30,11 @@ private:
     float correction_threshold_;
     float turn_speed_;
     float drive_speed_;
-
-    Wall get_wall_();
+    float target_distance_;
 
 public:
     RobotDriver(ros::NodeHandle nh);
-    RobotDriver(ros::NodeHandle nh, float scan_range, float correction_threshold, float turn_speed, float drive_speed);
+    RobotDriver(ros::NodeHandle nh, float scan_range, float correction_threshold, float turn_speed, float drive_speed, float target_distance);
 
     void set_scan_range(float scan_range)
     {
@@ -54,27 +56,37 @@ public:
         drive_speed_ = drive_speed;
     }
 
-    float get_scan_range(float scan_range)
+    void set_target_distance(float target_distance)
+    {
+        target_distance_ = target_distance;
+    }
+
+    float get_scan_range()
     {
         return scan_range_;
     }
 
-    float get_correction_threshold(float correction_threshold)
+    float get_correction_threshold()
     {
         return correction_threshold_;
     }
 
-    float get_turn_speed(float turn_speed)
+    float get_turn_speed()
     {
         return turn_speed_;
     }
 
-    float get_drive_speed(float drive_speed)
+    float get_drive_speed()
     {
         return drive_speed_;
     }
 
-    void reconfigure(float scan_range, float correction_threshold, float turn_speed, float drive_speed);
+    float get_target_distance()
+    {
+        return target_distance_;
+    }
+
+    void reconfigure(float scan_range, float correction_threshold, float turn_speed, float drive_speed, float target_distance);
 
     void button_input(const std_msgs::UInt8 &msg);
 
