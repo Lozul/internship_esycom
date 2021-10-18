@@ -38,25 +38,25 @@ void RobotDriver::button_input(const std_msgs::UInt8 &msg)
     {
         sensor_msgs::LaserScanConstPtr scan =
             ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
+
+        std::ofstream myfile;
+        myfile.open("/home/husarion/ros_workspace/data.csv");
         
-            std::ofstream myfile;
-            myfile.open("/home/husarion/ros_workspace/data.csv");
-            
-            for (int i = 0; i < scan->ranges.size(); i++)
-            {
-                float range = scan->ranges[i];
-                float angle = scan->angle_min + scan->angle_increment * i;
+        for (int i = 0; i < scan->ranges.size(); i++)
+        {
+            float range = scan->ranges[i];
+            float angle = scan->angle_min + scan->angle_increment * i;
 
-                if (range < scan->range_min || range > scan->range_max)
-                    continue;
+            if (range < scan->range_min || range > scan->range_max)
+                continue;
 
-                if (std::abs(angle) < 2.5)
-                    continue;
+            if (std::abs(angle) < 2.5)
+                continue;
 
-                myfile << angle << "," << range << std::endl;
-            }
+            myfile << angle << "," << range << std::endl;
+        }
 
-            myfile.close();
+        myfile.close();
     }
     else
         drive(1.0);
@@ -212,12 +212,14 @@ void RobotDriver::correct_angle()
 
     // Apply correction if needed
     ROS_DEBUG("RobotDriver: applying correction");
-    if (std::abs(correction) > correction_threshold_)
-    {
-        turn(target.angle > 0, correction);
-    }
+    // if (std::abs(correction) > correction_threshold_)
+    // {
+    //     turn(target.angle > 0, correction);
+    // }
 
-    ROS_INFO("RobotDriver: correction made or no correction to be made (%.3f rad)", correction);
+    turn(target.angle > 0, correction);
+
+    ROS_INFO("RobotDriver: correction made (%.3f rad)", correction);
 }
 
 bool RobotDriver::turn(bool clockwise, float radians)
@@ -240,7 +242,7 @@ bool RobotDriver::turn(bool clockwise, float radians)
     // The axis we want to be rotating by
     tf::Vector3 desired_turn_axis(0, 0, clockwise ? 1 : -1);
 
-    ros::Rate rate(10);
+    ros::Rate rate(100);
     bool done = false;
     while (!done && nh_.ok())
     {
