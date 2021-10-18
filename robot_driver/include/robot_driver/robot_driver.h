@@ -4,6 +4,7 @@
 #include <vector>
 #include <algorithm>
 #include <stdexcept>
+#include <fstream>
 #include <ros/ros.h>
 #include <std_msgs/UInt8.h>
 #include <geometry_msgs/Twist.h>

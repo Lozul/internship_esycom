@@ -36,18 +36,27 @@ void RobotDriver::button_input(const std_msgs::UInt8 &msg)
 {
     if (msg.data == 1)
     {
-        // correct_angle();
         sensor_msgs::LaserScanConstPtr scan =
             ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
+        
+            std::ofstream myfile;
+            myfile.open("/home/husarion/ros_workspace/data.csv");
+            
+            for (int i = 0; i < scan->ranges.size(); i++)
+            {
+                float range = scan->ranges[i];
+                float angle = scan->angle_min + scan->angle_increment * i;
 
-        int count = scan->scan_time / scan->time_increment;
+                if (range < scan->range_min || range > scan->range_max)
+                    continue;
 
-        ROS_INFO("Laser Scan:\n"
-            "\tangle_min: %f\n"
-            "\tangle_max: %f\n"
-            "\ttime_increment: %f\n"
-            "\tscan_time: %f\n"
-            "\trange.size: %d", scan->angle_min, scan->angle_max, scan->time_increment, scan->scan_time, scan->ranges.size());
+                if (std::abs(angle) < 2.5)
+                    continue;
+
+                myfile << angle << "," << range << std::endl;
+            }
+
+            myfile.close();
     }
     else
         drive(1.0);
@@ -77,7 +86,7 @@ struct Point
 
 bool compare_float(float a, float b)
 {
-    float epsilon = 0.1;
+    float epsilon = 0.05;
     float diff = a - b;
 
     return ((diff < epsilon) && (-diff < epsilon));
@@ -114,7 +123,7 @@ float find_border_angle(std::vector<Point> points, float target_distance, bool l
 void RobotDriver::correct_angle()
 {
     // Get laser data
-    ROS_INFO("RobotDriver: getting laser data...");
+    ROS_DEBUG("RobotDriver: getting laser data...");
     sensor_msgs::LaserScanConstPtr scan =
         ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
 
@@ -125,13 +134,13 @@ void RobotDriver::correct_angle()
     }
 
     // Filter laser data
-    ROS_INFO("RobotDriver: filtering laser data...");
+    ROS_DEBUG("RobotDriver: filtering laser data...");
     std::vector<Point> points;
 
     for (int i = 0; i < scan->ranges.size(); i++)
     {
         // Discard invalid values
-        float range = scan->ranges[0];
+        float range = scan->ranges[i];
 
         if (range < scan->range_min || range > scan->range_max)
             continue;
@@ -152,38 +161,58 @@ void RobotDriver::correct_angle()
         return;
     }
 
+    ROS_INFO("RobotDriver: target distance %.3f", target_distance_);
+
     // Search target borders
-    ROS_INFO("RobotDriver: searching target left border...");
+    ROS_DEBUG("RobotDriver: searching target left border...");
     float left = find_border_angle(points, target_distance_, true);
-    ROS_INFO("RobotDriver: searching target right border...");
+    ROS_DEBUG("RobotDriver: searching target right border...");
     float right = find_border_angle(points, target_distance_, false);
 
     ROS_INFO("RobotDriver: target found between %.3f and %.3f", left, right);
 
     // Search correction angle
-    float mean_range = 0;
-    std::for_each(points.begin(), points.end(), [&mean_range](Point &p){ mean_range += p.range; });
-    mean_range /= points.size();
+    // float mean_range = 0;
+    // std::for_each(points.begin(), points.end(), [&mean_range](Point &p){ mean_range += p.range; });
+    // mean_range /= points.size();
 
-    ROS_INFO("RobotDriver: mean range %.3f", mean_range);
+    // ROS_INFO("RobotDriver: mean range %.3f", mean_range);
 
     Point target;
 
-    ROS_INFO("RobotDriver: searching correction point...");
-    for (auto p : points)
+    ROS_DEBUG("RobotDriver: searching correction point...");
+    bool found = false;
+    int v = 0;
+    int t = 0;
+    for (int i = 0; i < points.size() && !found; i++)
     {
-        if ((p.angle <= left || p.angle >= right) && compare_float(p.range, mean_range))
+        Point p = points[i];
+        t += 1;
+        if (p.angle > left && p.angle < right)
+            continue;
+
+        if (compare_float(p.range, target_distance_))
         {
+            v += 1;
             target.angle = p.angle;
             target.range = p.range;
+            found = true;
         }
+    }
+
+    ROS_INFO("RobotDriver: %i / %i", v, t);
+
+    if (!found)
+    {
+        ROS_ERROR("RobotDriver: could not find correction point");
+        return;
     }
 
     float correction = (pi - std::abs(target.angle)) * (target.angle < 0 ? -1 : 1);
 
     // Apply correction if needed
-    ROS_INFO("RobotDriver: applying correction");
-    if (correction > correction_threshold_ && correction < -correction_threshold_)
+    ROS_DEBUG("RobotDriver: applying correction");
+    if (std::abs(correction) > correction_threshold_)
     {
         turn(target.angle > 0, correction);
     }
@@ -278,7 +307,7 @@ bool RobotDriver::drive(float distance)
 
     // Begin driving
     float dist_moved;
-    ros::Rate rate(10);
+    ros::Rate rate(100);
     bool done = false;
     while (!done && nh_.ok())
     {
