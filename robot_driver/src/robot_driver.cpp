@@ -72,8 +72,11 @@ int find_border_index(std::vector<Point> points, float target_distance, bool lef
         float range_min = std::abs((target_distance - epsilon) / cos_angle);
         float range_max = std::abs((target_distance + epsilon) / cos_angle);
 
+        ROS_DEBUG("RobotDriver: %.3f <= %.3f (%.3f) <= %.3f", range_min, points[i].range, points[i].angle, range_max);
+
         if (points[i].range < range_min || points[i].range > range_max)
         {
+            ROS_DEBUG("RobotDriver: Invalide");
             i += left ? -1 : 1;
             break;
         }
@@ -125,8 +128,12 @@ CorrectionReport RobotDriver::correct_angle()
             continue;
 
         // Save valide point
-        points.push_back({angle, range});
+        Point p;
+        p.range = range;
+        p.angle = angle;
+        points.push_back(p);
     }
+    ROS_DEBUG("RobotDriver: found %lu valide points", points.size());
 
     // Searching target borders
     int left_i = find_border_index(points, target_distance_, true);
@@ -139,7 +146,7 @@ CorrectionReport RobotDriver::correct_angle()
 
     if (left_i == -1 || right_i == -1)
     {
-        ROS_ERROR("RobotDriver: failed to find target");
+        ROS_ERROR("RobotDriver: failed to find target (left=%i, right=%i)", left_i, right_i);
         return report;
     }
 
