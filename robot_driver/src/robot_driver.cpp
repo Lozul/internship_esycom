@@ -54,12 +54,6 @@ void RobotDriver::reconfigure(float scan_range, float correction_threshold, floa
     target_distance_ = target_distance;
 }
 
-struct Point
-{
-    float angle;
-    float range;
-};
-
 bool compare_float(float a, float b, float epsilon = 0.05)
 {
     float diff = a - b;
@@ -67,7 +61,7 @@ bool compare_float(float a, float b, float epsilon = 0.05)
     return ((diff < epsilon) && (-diff < epsilon));
 }
 
-float find_border_angle(std::vector<Point> points, float target_distance, bool left)
+int find_border_index(std::vector<Point> points, float target_distance, bool left)
 {
     float epsilon = 0.1;
     int i = left ? 0 : points.size() - 1;
@@ -92,11 +86,15 @@ float find_border_angle(std::vector<Point> points, float target_distance, bool l
     if ((left && i == -1) || (!left && i == points.size()))
         return -1;
 
-    return points[i].angle;
+    return i;
 }
 
-void RobotDriver::correct_angle()
+CorrectionReport RobotDriver::correct_angle()
 {
+    // Init report
+    CorrectionReport report;
+    report.success = false;
+
     // Get laser data
     ROS_DEBUG("RobotDriver: getting laser data...");
     sensor_msgs::LaserScanConstPtr scan =
@@ -105,7 +103,7 @@ void RobotDriver::correct_angle()
     if (!scan)
     {
         ROS_ERROR("RobotDriver: no scan message");
-        return;
+        return report;
     }
 
     // Filter laser data
@@ -131,8 +129,22 @@ void RobotDriver::correct_angle()
     }
 
     // Searching target borders
-    float left = find_border_angle(points, target_distance_, true);
-    float right = find_border_angle(points, target_distance_, false);
+    int left_i = find_border_index(points, target_distance_, true);
+    int right_i = find_border_index(points, target_distance_, false);
+
+    if (left_i != -1)
+        report.left = points[left_i];
+    if (right_i != -1)
+        report.right = points[right_i];
+
+    if (left_i == -1 || right_i == -1)
+    {
+        ROS_ERROR("RobotDriver: failed to find target");
+        return report;
+    }
+
+    float left = points[left_i].angle;
+    float right = points[right_i].angle;
     ROS_INFO("RobotDriver: target border l=%.3f and r=%.3f", left, right);
 
     if (left < 0)
@@ -173,8 +185,8 @@ void RobotDriver::correct_angle()
 
     if (!found)
     {
-        ROS_ERROR("RobotDriver: could not find target");
-        return;
+        ROS_ERROR("RobotDriver: could not find correction point");
+        return report;
     }
 
     ROS_INFO("RobotDriver: target found at a=%.3f r=%.3f", target.angle, target.range);
@@ -186,6 +198,9 @@ void RobotDriver::correct_angle()
         turn(target.angle > 0, correction);
 
     ROS_INFO("RobotDriver: correction made or no correction to be made (%.3f rad)", correction);
+
+    report.success = true;
+    return report;
 }
 
 bool RobotDriver::turn(bool clockwise, float radians)

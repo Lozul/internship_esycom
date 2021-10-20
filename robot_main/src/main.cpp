@@ -55,11 +55,66 @@ int main(int argc, char **argv)
 
         if (execute_routine && current_step < routine.steps)
         {
-            ROS_INFO("RobotMain: routine step %i, angle correction...", current_step + 1);
-            rd.correct_angle();
-            ROS_INFO("RobotMain: routine step %i, driving to next stop", current_step + 1);
+            ROS_DEBUG("RobotMain: routine step %i, angle correction...", current_step + 1);
+
+            CorrectionReport report = rd.correct_angle();
+
+            if (!report.success)
+            {
+                ROS_INFO("RobotMain: angle correction failed, saving laser data...");
+
+                // Get current laser scan
+                sensor_msgs::LaserScanConstPtr scan =
+                    ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
+
+                // Open log file
+                std::ofstream log_file;
+                log_file.open("/home/husarion/ros_workspace/data.csv");
+
+                // Write target borders if any
+                if (report.left)
+                {
+                    Point left = report.left.value();
+                    log_file << left.angle << "," << left.range << std::endl;
+                }
+                else
+                    log_file << "0,0" << std::endl;
+
+                if (report.right)
+                {
+                    Point right = report.right.value();
+                    log_file << right.angle << "," << right.range << std::endl;
+                }
+                else
+                    log_file << "0,0" << std::endl;
+
+                // Write scan data
+                for (int i = 0; i < scan->ranges.size(); i++)
+                {
+                    float range = scan->ranges[i];
+
+                    if (range < scan->range_min || range > scan->range_max)
+                        continue;
+
+                    float angle = scan->angle_min + scan->angle_increment * i;
+
+                    log_file << angle << "," << range << std::endl;
+                }
+
+                log_file.close();
+
+                ROS_INFO("RobotMain: laser data saved at /home/husarion/ros_workspace/data.csv");
+
+                execute_routine = false;
+                continue;
+            }
+
+            ROS_DEBUG("RobotMain: routine step %i, driving to next stop", current_step + 1);
+
             rd.drive(routine.step_distance);
-            ROS_INFO("RobotMain: routine step %i done", current_step + 1);
+
+            ROS_DEBUG("RobotMain: routine step %i done", current_step + 1);
+
             current_step ++;
         }
         else if (current_step == routine.steps)

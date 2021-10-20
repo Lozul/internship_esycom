@@ -2,6 +2,7 @@
 
 #define _USE_MATH_DEFINES
 
+#include <optional>
 #include <cmath>
 #include <vector>
 #include <algorithm>
@@ -13,10 +14,17 @@
 #include <sensor_msgs/LaserScan.h>
 #include <tf/transform_listener.h>
 
-struct Wall
+struct Point
 {
     float range;
     float angle;
+};
+
+struct CorrectionReport
+{
+    std::optional<Point> left;
+    std::optional<Point> right;
+    bool success;
 };
 
 class RobotDriver
@@ -93,7 +101,7 @@ public:
 
     void button_input(const std_msgs::UInt8 &msg);
 
-    void correct_angle();
+    CorrectionReport correct_angle();
 
     bool turn(bool clockwise, float radians);
     bool drive(float distance);
