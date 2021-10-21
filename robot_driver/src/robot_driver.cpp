@@ -119,6 +119,9 @@ std::pair<int, int> find_borders(std::vector<Point> points, float target_distanc
     if (streak)
         mem.push_back(std::make_pair(start, start + length - 1));
 
+    if (mem.size() == 0)
+        return std::make_pair(-1, -1);
+
     if (mem.front().first == 0 && mem.back().second == points.size() - 1)
     {
         int a = mem.front().second;
