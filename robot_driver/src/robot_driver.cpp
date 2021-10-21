@@ -81,19 +81,66 @@ std::pair<int, int> find_borders(std::vector<Point> points, float target_distanc
         ROS_DEBUG("RobotDriver: %.3f <= %.3f (%.3f) <= %.3f", range_min, points[i].range, points[i].angle, range_max);
     }
 
-    bool mem = valid[0];
+    // bool mem = valid[0];
+
+    // for (int i = 0; i < points.size(); i++)
+    // {
+        // if (first == -1 && mem != valid[i])
+            // first = valid[i] ? i : i - 1;
+        // else if (first != -1 && mem != valid[i])
+            // second = valid[i] ? i : i - 1;
+
+        // mem = valid[i];
+    // }
+
+    std::vector<std::pair<int, int>> mem;
+    int start = 0;
+    int length = 0;
+    bool streak = false;
 
     for (int i = 0; i < points.size(); i++)
     {
-        if (first == -1 && mem != valid[i])
-            first = valid[i] ? i : i - 1;
-        else if (first != -1 && mem != valid[i])
-            second = valid[i] ? i : i - 1;
-
-        mem = valid[i];
+        if (valid[i] && !streak)
+        {
+            start = i;
+            length += 1;
+            streak = true;
+        }
+        else if (valid[i] && streak)
+        {
+            length += 1;
+        }
+        else if (!valid[i] && streak)
+        {
+            mem.push_back(std::make_pair(start, start + length - 1));
+        }
     }
 
-    return std::make_pair(first, second);
+    if (streak)
+        mem.push_back(std::make_pair(start, start + length - 1));
+
+    if (mem.front().first == 0 && mem.back().second == points.size() - 1)
+    {
+        int a = mem.front().second;
+        int b = mem.back().first;
+
+        mem[0].first = a;
+        mem[0].second = b;
+
+        mem.pop_back();
+    }
+
+    int mx_i = 0;
+
+    for (int i = 0; i < mem.size(); i++)
+    {
+        if (mem[i].second - mem[i].first > mem[mx_i].second - mem[mx_i].first)
+            mx_i = i;
+    }
+
+    return mem[mx_i];
+
+    // return std::make_pair(first, second);
 }
 
 CorrectionReport RobotDriver::correct_angle()
