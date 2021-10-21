@@ -141,33 +141,35 @@ CorrectionReport RobotDriver::correct_angle()
 
     // Searching target borders
     auto borders = find_borders(points, target_distance_);
-    int left_i = borders.first;
-    int right_i = borders.second;
 
-    if (left_i != -1)
-        report.left = points[left_i];
-    if (right_i != -1)
-        report.right = points[right_i];
+    // Update report borders if valid
+    if (borders.first != -1)
+        report.first = points[borders.first];
+    if (borders.second != -1)
+        report.second = points[borders.second];
 
-    if (left_i == -1 || right_i == -1 || left_i > right_i)
+    // Report in case of error
+    if (borders.first == -1 || borders.second == -1)
     {
-        ROS_ERROR("RobotDriver: failed to find target (left=%i, right=%i)", left_i, right_i);
+        ROS_ERROR("RobotDriver: failed to find target (left=%i, right=%i)", borders.first, borders.second);
         return report;
     }
+    
+    /*
+     * Here we transpose the angles between 0 and 2 pi
+     * Originaly they are between -pi and pi and I kept getting lost in my calculations so "flute" as we say in french
+     */
+    float first = points[borders.first].angle;
+    float second = points[borders.second].angle;
 
-    float left = points[left_i].angle;
-    float right = points[right_i].angle;
-    ROS_INFO("RobotDriver: target border l=%.3f and r=%.3f", left, right);
+    if (first < 0)
+        first += 2 * M_PI;
+    if (second < 0)
+        second += 2 * M_PI;
 
-    if (left < 0)
-        left += 2 * M_PI;
-    if (right < 0)
-        right += 2 * M_PI;
-
-    // float e = (left - right) / 4;
-    // ROS_INFO("RobotDriver: epsilon=%.3f", e);
-
-    ROS_INFO("RobotDriver: target border l=%.3f and r=%.3f", left, right);
+    float left = first > second ? first : second;
+    float right = first > second ? second : first;
+    ROS_INFO("RobotDriver: target borders are l=%.3f and r=%.3f", left, right);
 
     // Searching correction angle
     Point target;
@@ -180,7 +182,7 @@ CorrectionReport RobotDriver::correct_angle()
         if (a < 0)
             a += 2 * M_PI;
 
-        if (a < right /*+ e*/ || a > left /*- e*/)
+        if (a < right || a > left)
             continue;
 
         float current_diff = std::abs(target_distance_ - p.range);

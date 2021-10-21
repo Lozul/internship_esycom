@@ -72,18 +72,18 @@ int main(int argc, char **argv)
                 log_file.open("/home/husarion/ros_workspace/data.csv");
 
                 // Write target borders if any
-                if (report.left)
+                if (report.first)
                 {
-                    Point left = report.left.value();
-                    log_file << left.angle << "," << left.range << std::endl;
+                    Point first = report.first.value();
+                    log_file << first.angle << "," << first.range << std::endl;
                 }
                 else
                     log_file << "0,0" << std::endl;
 
-                if (report.right)
+                if (report.second)
                 {
-                    Point right = report.right.value();
-                    log_file << right.angle << "," << right.range << std::endl;
+                    Point second = report.second.value();
+                    log_file << second.angle << "," << second.range << std::endl;
                 }
                 else
                     log_file << "0,0" << std::endl;

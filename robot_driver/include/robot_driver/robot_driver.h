@@ -23,8 +23,8 @@ struct Point
 
 struct CorrectionReport
 {
-    std::optional<Point> left;
-    std::optional<Point> right;
+    std::optional<Point> first;
+    std::optional<Point> second;
     bool success;
 };
 
