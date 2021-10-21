@@ -102,6 +102,8 @@ CorrectionReport RobotDriver::correct_angle()
     CorrectionReport report;
     report.success = false;
 
+    ROS_DEBUG("RobotDriver: estimated target distance %.3f", target_distance_);
+
     // Get laser data
     ROS_DEBUG("RobotDriver: getting laser data...");
     sensor_msgs::LaserScanConstPtr scan =
@@ -187,9 +189,11 @@ CorrectionReport RobotDriver::correct_angle()
 
         float current_diff = std::abs(target_distance_ - p.range);
 
+        ROS_DEBUG("RobotDriver: (a=%.3f, r=%.3f) diff with estimated target is %.3f", a, p.range, current_diff);
+
         if (compare_float(p.range, target_distance_, 0.1) && current_diff < target_diff)
         {
-            ROS_INFO("update target r=%.3f a=%.3f (%.3f)", p.range, p.angle, a);
+            ROS_DEBUG("RobotDriver: target updated");
             target.angle = p.angle;
             target.range = p.range;
             target_diff = current_diff;
