@@ -65,9 +65,6 @@ std::pair<int, int> find_borders(std::vector<Point> points, float target_distanc
 {
     float epsilon = 0.1;
 
-    int first = -1;
-    int second = -1;
-
     bool valid[points.size()];
 
     for (int i = 0; i < points.size(); i++)
@@ -93,7 +90,7 @@ std::pair<int, int> find_borders(std::vector<Point> points, float target_distanc
         // mem = valid[i];
     // }
 
-    std::vector<std::pair<int, int>> mem;
+    std::vector<std::tuple<int, int, int>> mem;
     int start = 0;
     int length = 0;
     bool streak = false;
@@ -112,38 +109,39 @@ std::pair<int, int> find_borders(std::vector<Point> points, float target_distanc
         }
         else if (!valid[i] && streak)
         {
-            mem.push_back(std::make_pair(start, start + length - 1));
+            mem.push_back(std::make_tuple(start, start + length - 1, length));
         }
     }
 
     if (streak)
-        mem.push_back(std::make_pair(start, start + length - 1));
+        mem.push_back(std::make_tuple(start, start + length - 1, length));
 
     if (mem.size() == 0)
         return std::make_pair(-1, -1);
 
-    if (mem.front().first == 0 && mem.back().second == points.size() - 1)
+    if (std::get<0>(mem.front()) == 0 && std::get<1>(mem.back()) == points.size() - 1)
     {
-        int a = mem.front().second;
-        int b = mem.back().first;
+        int a = std::get<1>(mem.front());
+        int b = std::get<0>(mem.back());
+        int l = std::get<2>(mem.front()) + std::get<2>(mem.back());
 
-        mem[0].first = a;
-        mem[0].second = b;
-
+        mem.erase(mem.begin());
         mem.pop_back();
+
+        mem.push_back(std::make_tuple(a, b, l));
     }
 
     int mx_i = 0;
 
     for (int i = 0; i < mem.size(); i++)
     {
-        if (mem[i].second - mem[i].first > mem[mx_i].second - mem[mx_i].first)
+        if (std::get<2>(mem[i]) > std::get<2>(mem[mx_i]))
             mx_i = i;
     }
 
-    return mem[mx_i];
+    auto [ first, second, l ] = mem[mx_i];
 
-    // return std::make_pair(first, second);
+    return std::make_pair(first, second);
 }
 
 CorrectionReport RobotDriver::correct_angle()
