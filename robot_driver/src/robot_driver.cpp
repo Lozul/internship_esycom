@@ -163,10 +163,6 @@ CorrectionReport RobotDriver::correct_angle()
 
     report.last_scan = scan;
 
-    // Estimate target distance
-    float target_distance = (scan->ranges[0] + scan->ranges[scan->ranges.size() - 1]) / 2;
-    ROS_DEBUG("RobotDriver: estimated target distance is %.3f", target_distance);
-
     // Filter laser data
     ROS_DEBUG("RobotDriver: filtering laser data...");
     std::vector<Point> points;
@@ -192,6 +188,10 @@ CorrectionReport RobotDriver::correct_angle()
         points.push_back(p);
     }
     ROS_DEBUG("RobotDriver: found %lu valid points", points.size());
+
+    // Estimate target distance
+    float target_distance = (points.front().range + points.back().range) / 2;
+    ROS_DEBUG("RobotDriver: estimated target distance is %.3f", target_distance);
 
     // Searching target borders
     auto borders = find_borders(points, target_distance);
@@ -223,7 +223,7 @@ CorrectionReport RobotDriver::correct_angle()
 
     float left = first > second ? first : second;
     float right = first > second ? second : first;
-    ROS_INFO("RobotDriver: target borders are l=%.3f and r=%.3f", left, right);
+    ROS_INFO("RobotDriver: Target located between %.3fr and %.3fr at %.3fm", left, right, target_distance);
 
     // Searching correction angle
     Point target;
