@@ -282,7 +282,7 @@ bool RobotDriver::turn(bool clockwise, float radians)
     tf::StampedTransform start_transform;
     tf::StampedTransform current_transform;
 
-    // Record the starting transfrom from the odometry to the base link
+    // Record the starting transform from the odometry to the base link
     listener_.lookupTransform("base_link", "odom",
         ros::Time(0), start_transform);
 
@@ -339,7 +339,7 @@ bool RobotDriver::turn(bool clockwise, float radians)
     return done;
 }
 
-bool RobotDriver::drive(float distance)
+float RobotDriver::drive(float distance)
 {
     // We will record position here
     geometry_msgs::Point start_position;
@@ -351,7 +351,7 @@ bool RobotDriver::drive(float distance)
     if (!ptr)
     {
         ROS_ERROR("RobotDriver: failed to record starting position");
-        return false;
+        return 0;
     }
 
     start_position = ptr->pose.position;
@@ -376,7 +376,7 @@ bool RobotDriver::drive(float distance)
         if (!ptr)
         {
             ROS_ERROR("RobotDriver: failed to get current position");
-            return false;
+            return 0;
         }
 
         current_position = ptr->pose.position;
@@ -392,7 +392,7 @@ bool RobotDriver::drive(float distance)
     // Update target distance
     target_distance_ -= dist_moved;
 
-    return done;
+    return dist_moved;
 }
 
 void sayHello()

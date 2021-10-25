@@ -106,7 +106,7 @@ public:
     CorrectionReport correct_angle();
 
     bool turn(bool clockwise, float radians);
-    bool drive(float distance);
+    float drive(float distance);
 };
 
 void sayHello();
