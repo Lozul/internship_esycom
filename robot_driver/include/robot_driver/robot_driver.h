@@ -25,6 +25,7 @@ struct CorrectionReport
 {
     std::optional<Point> first;
     std::optional<Point> second;
+    std::optional<sensor_msgs::LaserScanConstPtr> last_scan;
     bool success;
 };
 

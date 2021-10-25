@@ -161,6 +161,8 @@ CorrectionReport RobotDriver::correct_angle()
         return report;
     }
 
+    report.last_scan = scan;
+
     // Estimate target distance
     float target_distance = (scan->ranges[0] + scan->ranges[scan->ranges.size() - 1]) / 2;
     ROS_DEBUG("RobotDriver: estimated target distance is %.3f", target_distance);

@@ -64,8 +64,13 @@ int main(int argc, char **argv)
                 ROS_INFO("RobotMain: angle correction failed, saving laser data...");
 
                 // Get current laser scan
-                sensor_msgs::LaserScanConstPtr scan =
-                    ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
+                if (!report.last_scan)
+                {
+                    ROS_ERROR("RobotMain: correction report does not contains last scan");
+                    continue;
+                }
+
+                auto scan = report.last_scan->get();
 
                 // Open log file
                 std::ofstream log_file;
