@@ -76,6 +76,10 @@ int main(int argc, char **argv)
                 std::ofstream log_file;
                 log_file.open("/home/husarion/ros_workspace/data.csv");
 
+                // Write target distance
+                float laser_td = (scan->ranges[0] + scan->ranges[scan->ranges.size() - 1]) / 2;
+                log_file << rd.get_target_distance() << "," << laser_td << std::endl;
+
                 // Write target borders if any
                 if (report.first)
                 {
