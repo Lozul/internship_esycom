@@ -9,7 +9,7 @@ bool execute_routine = false;
 
 void reconfigure(robot_main::GlobalConfig &config, uint32_t level, RobotDriver &rd, Routine &routine)
 {
-    rd.reconfigure(config.scan_range, config.correction_threshold, config.turn_speed, config.drive_speed, config.target_distance);
+    rd.reconfigure(config.scan_range, config.correction_threshold, config.turn_speed, config.drive_speed);
     routine.reconfigure(config.steps, config.step_distance);
 }
 
@@ -52,6 +52,9 @@ int main(int argc, char **argv)
     {
         ros::spinOnce();
         loop_rate.sleep();
+
+        if (execute_routine && current_step == 0)
+            rd.get_target();
 
         if (execute_routine && current_step < routine.steps)
         {

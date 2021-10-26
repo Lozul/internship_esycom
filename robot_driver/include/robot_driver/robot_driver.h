@@ -47,7 +47,7 @@ private:
 
 public:
     RobotDriver(ros::NodeHandle nh);
-    RobotDriver(ros::NodeHandle nh, float scan_range, float correction_threshold, float turn_speed, float drive_speed, float target_distance);
+    RobotDriver(ros::NodeHandle nh, float scan_range, float correction_threshold, float turn_speed, float drive_speed);
 
     void set_scan_range(float scan_range)
     {
@@ -99,9 +99,11 @@ public:
         return target_distance_;
     }
 
-    void reconfigure(float scan_range, float correction_threshold, float turn_speed, float drive_speed, float target_distance);
+    void reconfigure(float scan_range, float correction_threshold, float turn_speed, float drive_speed);
 
     void button_input(const std_msgs::UInt8 &msg);
+
+    bool get_target();
 
     CorrectionReport correct_angle();
 

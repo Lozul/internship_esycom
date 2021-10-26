@@ -1,10 +1,10 @@
 #include "robot_driver/robot_driver.h"
 
 RobotDriver::RobotDriver(ros::NodeHandle nh)
-    : RobotDriver(nh, 0, 0, 0, 0, 0)
+    : RobotDriver(nh, 0, 0, 0, 0)
 {}
 
-RobotDriver::RobotDriver(ros::NodeHandle nh, float scan_range, float correction_threshold, float turn_speed, float drive_speed, float target_distance)
+RobotDriver::RobotDriver(ros::NodeHandle nh, float scan_range, float correction_threshold, float turn_speed, float drive_speed)
 {
     if (scan_range < 0)
         scan_range = -scan_range;
@@ -14,7 +14,6 @@ RobotDriver::RobotDriver(ros::NodeHandle nh, float scan_range, float correction_
     correction_threshold_ = correction_threshold;
     turn_speed_ = turn_speed;
     drive_speed_ = drive_speed;
-    target_distance_ = target_distance;
 
     pub_cmd_vel_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
 
@@ -38,7 +37,28 @@ void RobotDriver::button_input(const std_msgs::UInt8 &msg)
         turn(false, M_PI / 2);
 }
 
-void RobotDriver::reconfigure(float scan_range, float correction_threshold, float turn_speed, float drive_speed, float target_distance)
+bool RobotDriver::get_target()
+{
+    ROS_DEBUG("RobotDriver: getting target");
+    sensor_msgs::LaserScanConstPtr scan =
+        ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
+
+    if (!scan)
+    {
+        ROS_ERROR("RobotDriver: no scan message");
+        return false;
+    }
+
+    int ranges_size = scan->ranges.size();
+
+    target_distance_ = (scan->ranges[0] + scan->ranges[ranges_size - 1]) / 2;
+
+    ROS_DEBUG("RobotDriver: target distance: %.3f", target_distance_);
+
+    return true;
+}
+
+void RobotDriver::reconfigure(float scan_range, float correction_threshold, float turn_speed, float drive_speed)
 {
     ROS_DEBUG("RobotDriver: reconfigure request:\n"
         "\tscan_range: %.3f\n"
@@ -51,7 +71,6 @@ void RobotDriver::reconfigure(float scan_range, float correction_threshold, floa
     correction_threshold_ = correction_threshold;
     turn_speed_ = turn_speed;
     drive_speed_ = drive_speed;
-    target_distance_ = target_distance;
 }
 
 bool compare_float(float a, float b, float epsilon = 0.05)
@@ -77,18 +96,6 @@ std::pair<int, int> find_borders(std::vector<Point> points, float target_distanc
 
         ROS_DEBUG("RobotDriver: %.3f <= %.3f (%.3f) <= %.3f", range_min, points[i].range, points[i].angle, range_max);
     }
-
-    // bool mem = valid[0];
-
-    // for (int i = 0; i < points.size(); i++)
-    // {
-        // if (first == -1 && mem != valid[i])
-            // first = valid[i] ? i : i - 1;
-        // else if (first != -1 && mem != valid[i])
-            // second = valid[i] ? i : i - 1;
-
-        // mem = valid[i];
-    // }
 
     std::vector<std::tuple<int, int, int>> mem;
     int start = 0;
@@ -190,11 +197,11 @@ CorrectionReport RobotDriver::correct_angle()
     ROS_DEBUG("RobotDriver: found %lu valid points", points.size());
 
     // Estimate target distance
-    float target_distance = (points.front().range + points.back().range) / 2;
-    ROS_DEBUG("RobotDriver: estimated target distance is %.3f", target_distance);
+    // float target_distance = (points.front().range + points.back().range) / 2;
+    // ROS_DEBUG("RobotDriver: estimated target distance is %.3f", target_distance);
 
     // Searching target borders
-    auto borders = find_borders(points, target_distance);
+    auto borders = find_borders(points, target_distance_);
 
     // Update report borders if valid
     if (borders.first != -1)
@@ -223,7 +230,7 @@ CorrectionReport RobotDriver::correct_angle()
 
     float left = first > second ? first : second;
     float right = first > second ? second : first;
-    ROS_INFO("RobotDriver: Target located between %.3fr and %.3fr at %.3fm", left, right, target_distance);
+    ROS_INFO("RobotDriver: Target located between %.3fr and %.3fr at %.3fm", left, right, target_distance_);
 
     // Searching correction angle
     Point target;
@@ -239,11 +246,11 @@ CorrectionReport RobotDriver::correct_angle()
         if (a < right || a > left)
             continue;
 
-        float current_diff = std::abs(target_distance - p.range);
+        float current_diff = std::abs(target_distance_ - p.range);
 
         ROS_DEBUG("RobotDriver: (a=%.3f, r=%.3f) diff with estimated target is %.3f", a, p.range, current_diff);
 
-        if (compare_float(p.range, target_distance, 0.1) && current_diff < target_diff)
+        if (compare_float(p.range, target_distance_, 0.1) && current_diff < target_diff)
         {
             ROS_DEBUG("RobotDriver: target updated");
             target.angle = p.angle;
