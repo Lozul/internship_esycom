@@ -61,7 +61,7 @@ bool compare_float(float a, float b, float epsilon = 0.05)
     return ((diff < epsilon) && (-diff < epsilon));
 }
 
-std::pair<int, int> find_borders(const std::vector<Point> &points, float target_distance)
+std::pair<int, int> find_borders(const std::vector<Point> &points, float target_distance, float theta_angle)
 {
     float epsilon = 0.1;
 
@@ -69,6 +69,11 @@ std::pair<int, int> find_borders(const std::vector<Point> &points, float target_
 
     for (int i = 0; i < points.size(); i++)
     {
+        float angle = points[i].angle;
+
+        if (angle > -theta_angle && angle < theta_angle)
+            continue;
+
         float cos_angle = std::cos(points[i].angle);
         float range_min = std::abs((target_distance - epsilon) / cos_angle);
         float range_max = std::abs((target_distance + epsilon) / cos_angle);
@@ -112,17 +117,8 @@ std::pair<int, int> find_borders(const std::vector<Point> &points, float target_
     if (indexes.size() == 0)
         return std::make_pair(-1, -1);
 
-    // if (std::get<0>(mem.front()) == 0 && std::get<1>(mem.back()) == points.size() - 1)
     if (indexes.front().first == 0 && indexes.back().second == points.size() - 1)
     {
-        // int a = std::get<1>(mem.front());
-        // int b = std::get<0>(mem.back());
-        // int l = std::get<2>(mem.front()) + std::get<2>(mem.back());
-
-        // mem.erase(mem.begin());
-        // mem.pop_back();
-
-        // mem.push_back(std::make_tuple(a, b, l));
 
         indexes.front().first = indexes.front().second;
         indexes.front().second = indexes.back().first;
@@ -179,7 +175,7 @@ CorrectionReport RobotDriver::correct_angle()
         // Discard values that are not in front of the robot
         float angle = scan->angle_min + scan->angle_increment * i;
 
-        if (angle > -2.5 && angle < 2.5)
+        if (angle > -(M_PI / 2) && angle < (M_PI / 2))
             continue;
 
         // Save valid point
@@ -190,12 +186,27 @@ CorrectionReport RobotDriver::correct_angle()
     }
     ROS_DEBUG("RobotDriver: found %lu valid points", points.size());
 
+    if (points.size() == 0)
+    {
+        ROS_ERROR("RobotDriver: no valide point found");
+        return report;
+    }
+
     // Estimate target distance
-    float target_distance = (points.front().range + points.back().range) / 2;
+    float first_range = points[0].range;
+    float last_range = points[points.size() - 1].range;
+
+    if (!compare_float(first_range, last_range, 0.02))
+        ROS_WARN("RobotDriver: big difference between front ranges: %.3f %.3f", first_range, last_range);
+
+    float target_distance = (first_range + last_range) / 2;
     ROS_DEBUG("RobotDriver: estimated target distance is %.3f", target_distance);
 
+    float theta_angle = M_PI - atan(0.5 / target_distance);
+    ROS_DEBUG("RobotDriver: theta angle = %.3f", theta_angle);
+
     // Searching target borders
-    auto borders = find_borders(points, target_distance);
+    auto borders = find_borders(points, target_distance, theta_angle);
 
     // Update report borders if valid
     if (borders.first != -1)
