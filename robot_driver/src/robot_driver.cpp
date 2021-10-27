@@ -61,7 +61,7 @@ bool compare_float(float a, float b, float epsilon = 0.05)
     return ((diff < epsilon) && (-diff < epsilon));
 }
 
-std::pair<int, int> find_borders(std::vector<Point> points, float target_distance)
+std::pair<int, int> find_borders(const std::vector<Point> &points, float target_distance)
 {
     float epsilon = 0.1;
 
@@ -78,19 +78,8 @@ std::pair<int, int> find_borders(std::vector<Point> points, float target_distanc
         ROS_DEBUG("RobotDriver: %.3f <= %.3f (%.3f) <= %.3f", range_min, points[i].range, points[i].angle, range_max);
     }
 
-    // bool mem = valid[0];
-
-    // for (int i = 0; i < points.size(); i++)
-    // {
-        // if (first == -1 && mem != valid[i])
-            // first = valid[i] ? i : i - 1;
-        // else if (first != -1 && mem != valid[i])
-            // second = valid[i] ? i : i - 1;
-
-        // mem = valid[i];
-    // }
-
-    std::vector<std::tuple<int, int, int>> mem;
+    std::vector<std::pair<int, int>> indexes;
+    std::vector<int> lengths;
     int start = 0;
     int length = 0;
     bool streak = false;
@@ -109,39 +98,51 @@ std::pair<int, int> find_borders(std::vector<Point> points, float target_distanc
         }
         else if (!valid[i] && streak)
         {
-            mem.push_back(std::make_tuple(start, start + length - 1, length));
+            indexes.push_back(std::make_pair(start, start + length - 1));
+            lengths.push_back(length);
         }
     }
 
     if (streak)
-        mem.push_back(std::make_tuple(start, start + length - 1, length));
+    {
+        indexes.push_back(std::make_pair(start, start + length - 1));
+        lengths.push_back(length);
+    }
 
-    if (mem.size() == 0)
+    if (indexes.size() == 0)
         return std::make_pair(-1, -1);
 
-    if (std::get<0>(mem.front()) == 0 && std::get<1>(mem.back()) == points.size() - 1)
+    // if (std::get<0>(mem.front()) == 0 && std::get<1>(mem.back()) == points.size() - 1)
+    if (indexes.front().first == 0 && indexes.back().second == points.size() - 1)
     {
-        int a = std::get<1>(mem.front());
-        int b = std::get<0>(mem.back());
-        int l = std::get<2>(mem.front()) + std::get<2>(mem.back());
+        // int a = std::get<1>(mem.front());
+        // int b = std::get<0>(mem.back());
+        // int l = std::get<2>(mem.front()) + std::get<2>(mem.back());
 
-        mem.erase(mem.begin());
-        mem.pop_back();
+        // mem.erase(mem.begin());
+        // mem.pop_back();
 
-        mem.push_back(std::make_tuple(a, b, l));
+        // mem.push_back(std::make_tuple(a, b, l));
+
+        indexes.front().first = indexes.front().second;
+        indexes.front().second = indexes.back().first;
+        lengths[0] += lengths.back();
+
+        indexes.pop_back();
+        lengths.pop_back();
     }
 
     int mx_i = 0;
 
-    for (int i = 0; i < mem.size(); i++)
+    for (int i = 0; i < indexes.size(); i++)
     {
-        if (std::get<2>(mem[i]) > std::get<2>(mem[mx_i]))
+        if (lengths[i] > lengths[mx_i])
             mx_i = i;
     }
 
-    auto [ first, second, l ] = mem[mx_i];
+    auto result = indexes[mx_i];
 
-    return std::make_pair(first, second);
+    return result;
 }
 
 CorrectionReport RobotDriver::correct_angle()
