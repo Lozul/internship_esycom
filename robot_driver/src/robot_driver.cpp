@@ -190,11 +190,11 @@ CorrectionReport RobotDriver::correct_angle()
     ROS_DEBUG("RobotDriver: found %lu valid points", points.size());
 
     // Estimate target distance
-    // float target_distance = (points.front().range + points.back().range) / 2;
-    // ROS_DEBUG("RobotDriver: estimated target distance is %.3f", target_distance);
+    float target_distance = (points.front().range + points.back().range) / 2;
+    ROS_DEBUG("RobotDriver: estimated target distance is %.3f", target_distance);
 
     // Searching target borders
-    auto borders = find_borders(points, target_distance_);
+    auto borders = find_borders(points, target_distance);
 
     // Update report borders if valid
     if (borders.first != -1)
@@ -223,7 +223,7 @@ CorrectionReport RobotDriver::correct_angle()
 
     float left = first > second ? first : second;
     float right = first > second ? second : first;
-    ROS_INFO("RobotDriver: Target located between %.3fr and %.3fr at %.3fm", left, right, target_distance_);
+    ROS_INFO("RobotDriver: Target located between %.3fr and %.3fr at %.3fm", left, right, target_distance);
 
     // Searching correction angle
     Point target;
@@ -239,11 +239,11 @@ CorrectionReport RobotDriver::correct_angle()
         if (a < right || a > left)
             continue;
 
-        float current_diff = std::abs(target_distance_ - p.range);
+        float current_diff = std::abs(target_distance - p.range);
 
         ROS_DEBUG("RobotDriver: (a=%.3f, r=%.3f) diff with estimated target is %.3f", a, p.range, current_diff);
 
-        if (compare_float(p.range, target_distance_, 0.1) && current_diff < target_diff)
+        if (compare_float(p.range, target_distance, 0.1) && current_diff < target_diff)
         {
             ROS_DEBUG("RobotDriver: target updated");
             target.angle = p.angle;

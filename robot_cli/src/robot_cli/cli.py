@@ -82,11 +82,10 @@ def cmd_start():
     ----------------
         steps: {0}
         step_distance: {1} m
-        target_distance: {2} m
     ------------------------
     """
 
-    print(msg.format(config.steps, config.step_distance, config.target_distance))
+    print(msg.format(config.steps, config.step_distance))
 
     user = raw_input("Start routine (Y/n)? ")
 
