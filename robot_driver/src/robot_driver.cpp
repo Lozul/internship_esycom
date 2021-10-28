@@ -105,6 +105,8 @@ std::pair<int, int> find_borders(const std::vector<Point> &points, float target_
         {
             indexes.push_back(std::make_pair(start, start + length - 1));
             lengths.push_back(length);
+            length = 0;
+            streak = false;
         }
     }
 
@@ -184,7 +186,7 @@ CorrectionReport RobotDriver::correct_angle()
         p.angle = angle;
         points.push_back(p);
     }
-    ROS_DEBUG("RobotDriver: found %lu valid points", points.size());
+    ROS_INFO("RobotDriver: searching through %lu points...", points.size());
 
     if (points.size() == 0)
     {
@@ -210,6 +212,12 @@ CorrectionReport RobotDriver::correct_angle()
 
     // Searching target borders
     auto borders = find_borders(points, target_distance, theta_angle);
+
+    if (borders.first >= points.size() || borders.second >= points.size())
+    {
+        ROS_ERROR("RobotDriver: find_borders failed, out of bounds index (%i or %i)", borders.first, borders.second);
+        return report;
+    }
 
     // Update report borders if valid
     if (borders.first != -1)
