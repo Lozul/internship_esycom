@@ -80,7 +80,7 @@ std::pair<int, int> find_borders(const std::vector<Point> &points, float target_
 
         valid[i] = range_min <= points[i].range && points[i].range <= range_max;
 
-        ROS_DEBUG("RobotDriver: %.3f <= %.3f (%.3f) <= %.3f", range_min, points[i].range, points[i].angle, range_max);
+        // ROS_DEBUG("RobotDriver: %.3f <= %.3f (%.3f) <= %.3f", range_min, points[i].range, points[i].angle, range_max);
     }
 
     std::vector<std::pair<int, int>> indexes;
@@ -205,6 +205,9 @@ CorrectionReport RobotDriver::correct_angle()
     float theta_angle = M_PI - atan(0.5 / target_distance);
     ROS_DEBUG("RobotDriver: theta angle = %.3f", theta_angle);
 
+    report.target_distance = target_distance;
+    report.theta_angle = theta_angle;
+
     // Searching target borders
     auto borders = find_borders(points, target_distance, theta_angle);
 
@@ -253,7 +256,7 @@ CorrectionReport RobotDriver::correct_angle()
 
         float current_diff = std::abs(target_distance - p.range);
 
-        ROS_DEBUG("RobotDriver: (a=%.3f, r=%.3f) diff with estimated target is %.3f", a, p.range, current_diff);
+        // ROS_DEBUG("RobotDriver: (a=%.3f, r=%.3f) diff with estimated target is %.3f", a, p.range, current_diff);
 
         if (compare_float(p.range, target_distance, 0.1) && current_diff < target_diff)
         {
@@ -271,7 +274,9 @@ CorrectionReport RobotDriver::correct_angle()
         return report;
     }
 
-    ROS_INFO("RobotDriver: target found at a=%.3f r=%.3f", target.angle, target.range);
+    ROS_INFO("RobotDriver: Correction point found (%.3f rad, %.3f m)", target.angle, target.range);
+
+    report.correction_point = target;
 
     float correction = M_PI - std::abs(target.angle);
 

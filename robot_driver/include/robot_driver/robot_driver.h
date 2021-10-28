@@ -17,15 +17,20 @@
 
 struct Point
 {
-    float range;
-    float angle;
+    float range = 0;
+    float angle = 0;
 };
 
 struct CorrectionReport
 {
+    float target_distance = 0;
+    float theta_angle = 0;
+
     std::optional<Point> first;
     std::optional<Point> second;
+    std::optional<Point> correction_point;
     std::optional<sensor_msgs::LaserScanConstPtr> last_scan;
+
     bool success;
 };
 

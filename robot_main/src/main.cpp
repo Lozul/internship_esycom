@@ -1,3 +1,4 @@
+#include <string>
 #include <ros/ros.h>
 #include <std_msgs/Bool.h>
 #include <dynamic_reconfigure/server.h>
@@ -46,6 +47,9 @@ int main(int argc, char **argv)
     f = boost::bind(&reconfigure, _1, _2, boost::ref(rd), boost::ref(routine));
     server.setCallback(f);
 
+    std::string report_folder = "/home/husarion/ros_workspace/reports/";
+    std::string extension = ".csv";
+
     // Main loop
     int current_step = 0;
     while (nh.ok())
@@ -59,9 +63,9 @@ int main(int argc, char **argv)
 
             CorrectionReport report = rd.correct_angle();
 
-            if (!report.success)
+            if (true)
             {
-                ROS_INFO("RobotMain: angle correction failed, saving laser data...");
+                // ROS_INFO("RobotMain: angle correction failed, saving laser data...");
 
                 // Get current laser scan
                 if (!report.last_scan)
@@ -74,9 +78,13 @@ int main(int argc, char **argv)
 
                 // Open log file
                 std::ofstream log_file;
-                log_file.open("/home/husarion/ros_workspace/data.csv");
+                std::string file_name = report_folder + std::to_string(current_step) + extension;
+                log_file.open(file_name);
 
-                // Write target borders if any
+                // Write entries of the target search algorithm
+                log_file << report.target_distance << "," << report.theta_angle << std::endl;
+
+                // Write target data if any
                 if (report.first)
                 {
                     Point first = report.first.value();
@@ -89,6 +97,14 @@ int main(int argc, char **argv)
                 {
                     Point second = report.second.value();
                     log_file << second.angle << "," << second.range << std::endl;
+                }
+                else
+                    log_file << "0,0" << std::endl;
+
+                if (report.correction_point)
+                {
+                    auto p = report.correction_point.value();
+                    log_file << p.angle << "," << p.range << std::endl;
                 }
                 else
                     log_file << "0,0" << std::endl;
