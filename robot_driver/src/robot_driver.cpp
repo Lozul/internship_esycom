@@ -61,10 +61,8 @@ bool compare_float(float a, float b, float epsilon = 0.05)
     return ((diff < epsilon) && (-diff < epsilon));
 }
 
-std::pair<int, int> find_borders(const std::vector<Point> &points, float target_distance, float theta_angle)
+std::pair<int, int> find_borders(const std::vector<Point> &points, float target_distance, float theta_angle, float epsilon = 0.1)
 {
-    float epsilon = 0.1;
-
     bool valid[points.size()] = { 0 };
 
     for (int i = 0; i < points.size(); i++)
@@ -204,14 +202,23 @@ CorrectionReport RobotDriver::correct_angle()
     float target_distance = (first_range + last_range) / 2;
     ROS_DEBUG("RobotDriver: estimated target distance is %.3f", target_distance);
 
+    // Theta angle
     float theta_angle = M_PI - atan(0.5 / target_distance);
     ROS_DEBUG("RobotDriver: theta angle = %.3f", theta_angle);
 
     report.target_distance = target_distance;
     report.theta_angle = theta_angle;
 
+    // Accuracy
+    float accuracy = 1;
+
+    if (3 < target_distance && target_distance <= 5)
+        accuracy = 2;
+    else if (5 < target_distance)
+        accuracy = 2.5;
+
     // Searching target borders
-    auto borders = find_borders(points, target_distance, theta_angle);
+    auto borders = find_borders(points, target_distance, theta_angle, accuracy * target_distance / 100);
 
     if (borders.first >= points.size() || borders.second >= points.size())
     {
