@@ -125,9 +125,6 @@ int main(int argc, char **argv)
                 log_file.close();
 
                 ROS_INFO("RobotMain: laser data saved at /home/husarion/ros_workspace/data.csv");
-
-                execute_routine = false;
-                continue;
             }
 
             ROS_DEBUG("RobotMain: routine step %i, driving to next stop", current_step + 1);
