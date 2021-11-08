@@ -65,7 +65,7 @@ std::pair<int, int> find_borders(const std::vector<Point> &points, float target_
 {
     float epsilon = 0.1;
 
-    bool valid[points.size()];
+    bool valid[points.size()] = { 0 };
 
     for (int i = 0; i < points.size(); i++)
     {
