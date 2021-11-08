@@ -231,66 +231,33 @@ CorrectionReport RobotDriver::correct_angle()
         ROS_ERROR("RobotDriver: failed to find target (left=%i, right=%i)", borders.first, borders.second);
         return report;
     }
-    
-    /*
-     * Here we transpose the angles between 0 and 2 pi
-     * Originaly they are between -pi and pi and I kept getting lost in my calculations so "flute" as we say in french
-     */
-    float first = points[borders.first].angle;
-    float second = points[borders.second].angle;
-
-    if (first < 0)
-        first += 2 * M_PI;
-    if (second < 0)
-        second += 2 * M_PI;
-
-    float left = first > second ? first : second;
-    float right = first > second ? second : first;
-    ROS_INFO("RobotDriver: Target located between %.3fr and %.3fr at %.3fm", left, right, target_distance);
 
     // Searching correction angle
-    Point target;
-    float target_diff = 999;
-    bool found = false;
-    for (auto p : points)
-    {
-        float a = p.angle;
+    Point a = points[borders.first];
+    Point b = points[borders.second];
 
-        if (a < 0)
-            a += 2 * M_PI;
+    float x1 = a.range * std::cos(a.angle);
+    float y1 = a.range * std::sin(a.angle);
 
-        if (a < right || a > left)
-            continue;
+    float x2 = b.range * std::cos(b.angle);
+    float y2 = b.range * std::sin(b.angle);
 
-        float current_diff = std::abs(target_distance - p.range);
+    float x = (x1 + x2) / 2;
+    float y = (y1 + y2) / 2;
 
-        // ROS_DEBUG("RobotDriver: (a=%.3f, r=%.3f) diff with estimated target is %.3f", a, p.range, current_diff);
+    float r = std::sqrt(std::pow(x, 2) + std::pow(y, 2));
+    float t = 2 * atan(y / (x + r));
 
-        if (compare_float(p.range, target_distance, 0.1) && current_diff < target_diff)
-        {
-            ROS_DEBUG("RobotDriver: target updated");
-            target.angle = p.angle;
-            target.range = p.range;
-            target_diff = current_diff;
-            found = true;
-        }
-    }
+    Point correction_point = Point({r, t});
+    float correction = M_PI - std::abs(correction_point.angle);
 
-    if (!found)
-    {
-        ROS_ERROR("RobotDriver: could not find correction point");
-        return report;
-    }
+    ROS_INFO("RobotDriver: Correction point found (%.3f rad, %.3f m)", correction_point.angle, correction_point.range);
 
-    ROS_INFO("RobotDriver: Correction point found (%.3f rad, %.3f m)", target.angle, target.range);
-
-    report.correction_point = target;
-
-    float correction = M_PI - std::abs(target.angle);
+    report.correction_point = correction_point;
 
     // Applying correction
     if (correction > correction_threshold_)
-        turn(target.angle > 0, correction);
+        turn(correction_point.angle > 0, correction);
 
     ROS_INFO("RobotDriver: correction made or no correction to be made (%.3f rad)", correction);
 
