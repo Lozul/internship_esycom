@@ -1,4 +1,4 @@
-#include "data_exporter.h"
+#include "robot_main/data_exporter.h"
 
 void export_correction_report(CorrectionReport report, std::string file_name)
 {
@@ -6,10 +6,10 @@ void export_correction_report(CorrectionReport report, std::string file_name)
     if (!report.last_scan)
     {
         ROS_ERROR("DataExporter: correction report does not contains last scan");
-        continue;
+        return;
     }
 
-    auto scan = report.last_scan->get();
+    auto scan = *report.last_scan;
 
     // Open log file
     std::ofstream log_file;
@@ -47,10 +47,10 @@ void export_correction_report(CorrectionReport report, std::string file_name)
 
     log_file.close();
 
-    ROS_INFO("DataExporter: '%f' saved.", file_name.c_str());
+    ROS_INFO("DataExporter: '%s' saved.", file_name.c_str());
 }
 
-void export_laser_scan(sensor_msgs::LaserScanConstPtr scan, std::ofstream log_file)
+void export_laser_scan(sensor_msgs::LaserScanConstPtr scan, std::ofstream &log_file)
 {
     // Write scan data
     for (int i = 0; i < scan->ranges.size(); i++)
@@ -66,7 +66,7 @@ void export_laser_scan(sensor_msgs::LaserScanConstPtr scan, std::ofstream log_fi
     }
 }
 
-void export_laser_scan(sensor_msgs::LaserScanConstPtr scan, std::string file_name)
+void export_laser_scan(sensor_msgs::LaserScanConstPtr scan, std::string &file_name)
 {
     std::ofstream log_file;
     log_file.open(file_name);
@@ -75,5 +75,5 @@ void export_laser_scan(sensor_msgs::LaserScanConstPtr scan, std::string file_nam
 
     log_file.close();
 
-    ROS_INFO("DataExporter: '%f' saved.", file_name.c_str());
+    ROS_INFO("DataExporter: '%s' saved.", file_name.c_str());
 }

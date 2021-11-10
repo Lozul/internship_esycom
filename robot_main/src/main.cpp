@@ -49,7 +49,7 @@ int main(int argc, char **argv)
     server.setCallback(f);
 
     std::string report_folder = "/home/husarion/ros_workspace/reports/";
-    std::string after_correction_suffix = "_after"
+    std::string after_correction_suffix = "_after";
     std::string extension = ".csv";
 
     // Main loop

@@ -20,7 +20,7 @@ include_directories(
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(${PROJECT_NAME}_node src/main.cpp)
+add_executable(${PROJECT_NAME}_node src/main.cpp src/data_exporter.cpp)
 
 add_dependencies(${PROJECT_NAME}_node ${PROJECT_NAME}_gencfg)
 
