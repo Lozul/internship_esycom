@@ -5,6 +5,7 @@
 #include <robot_main/GlobalConfig.h>
 #include "robot_driver/robot_driver.h"
 #include "robot_main/routine.h"
+#include "robot_main/data_exporter.h"
 
 bool execute_routine = false;
 
@@ -48,6 +49,7 @@ int main(int argc, char **argv)
     server.setCallback(f);
 
     std::string report_folder = "/home/husarion/ros_workspace/reports/";
+    std::string after_correction_suffix = "_after"
     std::string extension = ".csv";
 
     // Main loop
@@ -63,69 +65,14 @@ int main(int argc, char **argv)
 
             CorrectionReport report = rd.correct_angle();
 
-            if (true)
-            {
-                // ROS_INFO("RobotMain: angle correction failed, saving laser data...");
+            // Export report
+            std::string file_name = report_folder + std::to_string(current_step) + extension;
+            export_correction_report(report, file_name);
 
-                // Get current laser scan
-                if (!report.last_scan)
-                {
-                    ROS_ERROR("RobotMain: correction report does not contains last scan");
-                    continue;
-                }
-
-                auto scan = report.last_scan->get();
-
-                // Open log file
-                std::ofstream log_file;
-                std::string file_name = report_folder + std::to_string(current_step) + extension;
-                log_file.open(file_name);
-
-                // Write entries of the target search algorithm
-                log_file << report.target_distance << "," << report.theta_angle << std::endl;
-
-                // Write target data if any
-                if (report.first)
-                {
-                    Point first = report.first.value();
-                    log_file << first.angle << "," << first.range << std::endl;
-                }
-                else
-                    log_file << "0,0" << std::endl;
-
-                if (report.second)
-                {
-                    Point second = report.second.value();
-                    log_file << second.angle << "," << second.range << std::endl;
-                }
-                else
-                    log_file << "0,0" << std::endl;
-
-                if (report.correction_point)
-                {
-                    auto p = report.correction_point.value();
-                    log_file << p.angle << "," << p.range << std::endl;
-                }
-                else
-                    log_file << "0,0" << std::endl;
-
-                // Write scan data
-                for (int i = 0; i < scan->ranges.size(); i++)
-                {
-                    float range = scan->ranges[i];
-
-                    if (range < scan->range_min || range > scan->range_max)
-                        continue;
-
-                    float angle = scan->angle_min + scan->angle_increment * i;
-
-                    log_file << angle << "," << range << std::endl;
-                }
-
-                log_file.close();
-
-                ROS_INFO("RobotMain: laser data saved at /home/husarion/ros_workspace/data.csv");
-            }
+            // Export laser scan after correction
+            file_name = report_folder + std::to_string(current_step) + after_correction_suffix + extension;
+            auto scan = ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
+            export_laser_scan(scan, file_name);
 
             ROS_DEBUG("RobotMain: routine step %i, driving to next stop", current_step + 1);
 
