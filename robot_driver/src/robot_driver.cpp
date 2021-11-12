@@ -240,31 +240,33 @@ CorrectionReport RobotDriver::correct_angle()
     }
 
     // Searching correction angle
-    Point a = points[borders.first];
-    Point b = points[borders.second];
+    //      Target's slope
+    Point p1 = points[borders.first];
+    Point p2 = points[borders.second];
 
-    float x1 = a.range * std::cos(a.angle);
-    float y1 = a.range * std::sin(a.angle);
+    float r1 = p1.range;
+    float a1 = M_PI - p1.angle;
+    float r2 = p2.range;
+    float a2 = M_PI - p2.angle;
 
-    float x2 = b.range * std::cos(b.angle);
-    float y2 = b.range * std::sin(b.angle);
+    float x1 = r1 * std::sin(a1);
+    float y1 = r1 * std::cos(a1);
+    float x2 = r2 * std::sin(a2);
+    float y2 = r2 * std::cos(a2);
 
-    float x = (x1 + x2) / 2;
-    float y = (y1 + y2) / 2;
+    float correction = std::atan((y2 - y1) / (x2 - x1));
 
-    float r = std::sqrt(std::pow(x, 2) + std::pow(y, 2));
-    float t = 2 * atan(y / (x + r));
-
-    Point correction_point = Point({r, t});
-    float correction = M_PI - std::abs(correction_point.angle);
+    Point correction_point = Point();
+    correction_point.range = target_distance;
+    correction_point.angle = M_PI + correction;
 
     ROS_INFO("RobotDriver: Correction point found (%.3f rad, %.3f m)", correction_point.angle, correction_point.range);
 
     report.correction_point = correction_point;
 
     // Applying correction
-    if (correction > correction_threshold_)
-        turn(correction_point.angle > 0, correction);
+    if (std::abs(correction) > correction_threshold_)
+        turn(correction < 0, std::abs(correction));
 
     ROS_INFO("RobotDriver: correction made or no correction to be made (%.3f rad)", correction);
 
@@ -274,8 +276,10 @@ CorrectionReport RobotDriver::correct_angle()
 
 bool RobotDriver::turn(bool clockwise, float radians)
 {
+    ROS_INFO("RobotDriver: turn function received %.3f", radians);
     while (radians < 0) radians += 2 * M_PI;
     while (radians > 2*M_PI) radians -= 2 * M_PI;
+    ROS_INFO("RobotDriver: turning %.3f", radians);
 
     // We will record transforms here
     tf::StampedTransform start_transform;
