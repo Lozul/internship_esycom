@@ -14,6 +14,7 @@
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/LaserScan.h>
 #include <tf/transform_listener.h>
+#include "polyfit/PolyfitBoost.hpp"
 
 struct Point
 {

@@ -241,20 +241,39 @@ CorrectionReport RobotDriver::correct_angle()
 
     // Searching correction angle
     //      Target's slope
-    Point p1 = points[borders.first];
-    Point p2 = points[borders.second];
+//  Point p1 = points[borders.first];
+//  Point p2 = points[borders.second];
 
-    float r1 = p1.range;
-    float a1 = M_PI - p1.angle;
-    float r2 = p2.range;
-    float a2 = M_PI - p2.angle;
+//  float r1 = p1.range;
+//  float a1 = M_PI - p1.angle;
+//  float r2 = p2.range;
+//  float a2 = M_PI - p2.angle;
 
-    float x1 = r1 * std::sin(a1);
-    float y1 = r1 * std::cos(a1);
-    float x2 = r2 * std::sin(a2);
-    float y2 = r2 * std::cos(a2);
+//  float x1 = r1 * std::sin(a1);
+//  float y1 = r1 * std::cos(a1);
+//  float x2 = r2 * std::sin(a2);
+//  float y2 = r2 * std::cos(a2);
 
-    float correction = std::atan((y2 - y1) / (x2 - x1));
+//  float correction = std::atan((y2 - y1) / (x2 - x1));
+
+    std::vector<float> xValues;
+    std::vector<float> yValues;
+
+    for (auto p : points)
+    {
+        if (points[borders.first].angle < p.angle && p.angle < points[borders.second].angle)
+            continue;
+
+        // Polar to cartesian
+        float x = p.range * std::sin(M_PI - p.angle);
+        float y = p.range * std::cos(M_PI - p.angle);
+        xValues.push_back(x);
+        yValues.push_back(y);
+    }
+
+    std::vector<float> fit = polyfit_boost(xValues, yValues, 1);
+
+    float correction = std::atan(fit[1]);
 
     Point correction_point = Point();
     correction_point.range = target_distance;
