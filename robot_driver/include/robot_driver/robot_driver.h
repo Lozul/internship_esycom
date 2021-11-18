@@ -16,20 +16,36 @@
 #include <tf/transform_listener.h>
 #include "polyfit/PolyfitBoost.hpp"
 
+#define NO_SCAN_POINT 100
+#define FIND_BORDERS_FAILED 101
+#define NO_BORDERS 102
+
 struct Point
 {
     float range = 0;
     float angle = 0;
 };
 
+struct Target
+{
+    // Front points from scan where target should be
+    std::vector<Point> points;
+
+    // Indexes of target's edges
+    int first_edge_index = 0;
+    int second_edge_index = 0;
+
+    // Misc data used to find target
+    float range = 0;
+    float theta_angle = 0;
+};
+
 struct CorrectionReport
 {
-    float target_distance = 0;
-    float theta_angle = 0;
+    Target target;
 
-    std::optional<Point> first;
-    std::optional<Point> second;
-    std::optional<Point> correction_point;
+    std::vector<float> polyfit;
+
     std::optional<sensor_msgs::LaserScanConstPtr> last_scan;
 
     bool success;
@@ -116,3 +132,7 @@ public:
 };
 
 void sayHello();
+
+Target get_target(sensor_msgs::LaserScanConstPtr scan);
+
+std::vector<float> get_correction(std::vector<Point> &points, int first_edge_index, int second_edge_index);

@@ -141,27 +141,12 @@ std::pair<int, int> find_borders(const std::vector<Point> &points, float target_
     return result;
 }
 
-CorrectionReport RobotDriver::correct_angle()
+Target get_target(sensor_msgs::LaserScanConstPtr scan)
 {
-    // Init report
-    CorrectionReport report;
-    report.success = false;
-
-    // Get laser data
-    ROS_DEBUG("RobotDriver: getting laser data...");
-    sensor_msgs::LaserScanConstPtr scan =
-        ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
-
-    if (!scan)
-    {
-        ROS_ERROR("RobotDriver: no scan message");
-        return report;
-    }
-
-    report.last_scan = scan;
+    Target target;
 
     // Filter laser data
-    ROS_DEBUG("RobotDriver: filtering laser data...");
+    ROS_DEBUG("get_target: filtering laser data...");
     std::vector<Point> points;
 
     for (int i = 0; i < scan->ranges.size(); i++)
@@ -181,15 +166,15 @@ CorrectionReport RobotDriver::correct_angle()
         // Save valid point
         Point p;
         p.range = range;
-        p.angle = angle;
+        p.angle = angle - 0.0246;
         points.push_back(p);
     }
-    ROS_INFO("RobotDriver: searching through %lu points...", points.size());
+    ROS_DEBUG("get_target: searching through %lu points...", points.size());
 
     if (points.size() == 0)
     {
-        ROS_ERROR("RobotDriver: no valide point found");
-        return report;
+        ROS_ERROR("get_target: found 0 valid point in laser scan");
+        throw (NO_SCAN_POINT);
     }
 
     // Estimate target distance
@@ -197,17 +182,17 @@ CorrectionReport RobotDriver::correct_angle()
     float last_range = points[points.size() - 1].range;
 
     if (!compare_float(first_range, last_range, 0.02))
-        ROS_WARN("RobotDriver: big difference between front ranges: %.3f %.3f", first_range, last_range);
+        ROS_WARN("get_target: difference between front ranges: %.3f %.3f", first_range, last_range);
 
     float target_distance = (first_range + last_range) / 2;
-    ROS_DEBUG("RobotDriver: estimated target distance is %.3f", target_distance);
+    ROS_DEBUG("get_target: estimated target distance is %.3f", target_distance);
 
     // Theta angle
     float theta_angle = M_PI - atan(0.5 / target_distance);
-    ROS_DEBUG("RobotDriver: theta angle = %.3f", theta_angle);
+    ROS_DEBUG("get_target: theta angle = %.3f", theta_angle);
 
-    report.target_distance = target_distance;
-    report.theta_angle = theta_angle;
+    target.range = target_distance;
+    target.theta_angle = theta_angle;
 
     // Accuracy
     float accuracy = 1;
@@ -223,45 +208,32 @@ CorrectionReport RobotDriver::correct_angle()
     if (borders.first >= points.size() || borders.second >= points.size())
     {
         ROS_ERROR("RobotDriver: find_borders failed, out of bounds index (%i or %i)", borders.first, borders.second);
-        return report;
+        throw (FIND_BORDERS_FAILED);
     }
-
-    // Update report borders if valid
-    if (borders.first != -1)
-        report.first = points[borders.first];
-    if (borders.second != -1)
-        report.second = points[borders.second];
 
     // Report in case of error
     if (borders.first == -1 || borders.second == -1)
     {
         ROS_ERROR("RobotDriver: failed to find target (left=%i, right=%i)", borders.first, borders.second);
-        return report;
+        throw (NO_BORDERS);
     }
 
-    // Searching correction angle
-    //      Target's slope
-//  Point p1 = points[borders.first];
-//  Point p2 = points[borders.second];
+    target.first_edge_index = borders.first;
+    target.second_edge_index = borders.second;
 
-//  float r1 = p1.range;
-//  float a1 = M_PI - p1.angle;
-//  float r2 = p2.range;
-//  float a2 = M_PI - p2.angle;
+    target.points = points;
 
-//  float x1 = r1 * std::sin(a1);
-//  float y1 = r1 * std::cos(a1);
-//  float x2 = r2 * std::sin(a2);
-//  float y2 = r2 * std::cos(a2);
+    return target;
+}
 
-//  float correction = std::atan((y2 - y1) / (x2 - x1));
-
+std::vector<float> get_correction(std::vector<Point> &points, int first_edge_index, int second_edge_index)
+{
     std::vector<float> xValues;
     std::vector<float> yValues;
 
     for (auto p : points)
     {
-        if (points[borders.first].angle < p.angle && p.angle < points[borders.second].angle)
+        if (points[first_edge_index].angle < p.angle && p.angle < points[second_edge_index].angle)
             continue;
 
         // Polar to cartesian
@@ -272,18 +244,62 @@ CorrectionReport RobotDriver::correct_angle()
     }
 
     std::vector<float> fit = polyfit_boost(xValues, yValues, 1);
+    fit[1] = std::atan(fit[1]);
 
-    float correction = std::atan(fit[1]);
+    return fit;
+}
 
-    Point correction_point = Point();
-    correction_point.range = target_distance;
-    correction_point.angle = M_PI + correction;
+CorrectionReport RobotDriver::correct_angle()
+{
+    // Init report
+    CorrectionReport report;
+    report.success = false;
 
-    ROS_INFO("RobotDriver: Correction point found (%.3f rad, %.3f m)", correction_point.angle, correction_point.range);
+    // Get laser data
+    ROS_DEBUG("RobotDriver: getting laser data...");
+    sensor_msgs::LaserScanConstPtr scan =
+        ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
 
-    report.correction_point = correction_point;
+    if (!scan)
+    {
+        ROS_ERROR("RobotDriver: no scan message");
+        return report;
+    }
+
+    report.last_scan = scan;
+
+    // Searching target
+    Target target;
+    try
+    {
+        target = get_target(scan);
+    }
+    catch (int e)
+    {
+        switch (e)
+        {
+        case NO_SCAN_POINT:
+        case FIND_BORDERS_FAILED:
+        case NO_BORDERS:
+            return report;
+            break;
+        default:
+            ROS_ERROR("RobotDriver: unkown error while getting target (%i)", e);
+            return report;
+            break;
+        }
+    }
+
+    report.target = target;
 
     // Applying correction
+    std::vector<float> polyfit =
+        get_correction(target.points, target.first_edge_index, target.second_edge_index);
+
+    report.polyfit = polyfit;
+
+    float correction = polyfit[1];
+
     if (std::abs(correction) > correction_threshold_)
         turn(correction < 0, std::abs(correction));
 

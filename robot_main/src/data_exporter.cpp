@@ -15,33 +15,27 @@ void export_correction_report(CorrectionReport report, std::string file_name)
     std::ofstream log_file;
     log_file.open(file_name);
 
-    // Write entries of the target search algorithm
-    log_file << report.target_distance << "," << report.theta_angle << std::endl;
+    // Write target data
+    log_file << report.target.range << "," << report.target.theta_angle << std::endl;
 
-    // Write target data if any
-    if (report.first)
+    if (report.target.points.size() > 0)
     {
-        Point first = report.first.value();
-        log_file << first.angle << "," << first.range << std::endl;
+        log_file << report.target.points.front().angle << "," << report.target.points.front().range << std::endl;
+        log_file << report.target.points.back().angle << "," << report.target.points.back().range << std::endl;
     }
     else
-        log_file << "0,0" << std::endl;
-
-    if (report.second)
     {
-        Point second = report.second.value();
-        log_file << second.angle << "," << second.range << std::endl;
+        log_file << "0,0" << std::endl << "0,0" << std::endl;
+    }
+
+    if (report.polyfit.size() == 2)
+    {
+        log_file << report.polyfit[1] << "," << report.polyfit[0] << std::endl;
     }
     else
-        log_file << "0,0" << std::endl;
-
-    if (report.correction_point)
     {
-        auto p = report.correction_point.value();
-        log_file << p.angle << "," << p.range << std::endl;
-    }
-    else
         log_file << "0,0" << std::endl;
+    }
 
     export_laser_scan(scan, log_file);
 
