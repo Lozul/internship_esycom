@@ -255,55 +255,64 @@ CorrectionReport RobotDriver::correct_angle()
     CorrectionReport report;
     report.success = false;
 
-    // Get laser data
-    ROS_DEBUG("RobotDriver: getting laser data...");
-    sensor_msgs::LaserScanConstPtr scan =
-        ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
+    float correction = 1;
+    float total_correction = 0;
 
-    if (!scan)
+    do 
     {
-        ROS_ERROR("RobotDriver: no scan message");
-        return report;
-    }
+        // Get laser data
+        ROS_DEBUG("RobotDriver: getting laser data...");
+        sensor_msgs::LaserScanConstPtr scan =
+            ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
 
-    report.last_scan = scan;
-
-    // Searching target
-    Target target;
-    try
-    {
-        target = get_target(scan);
-    }
-    catch (int e)
-    {
-        switch (e)
+        if (!scan)
         {
-        case NO_SCAN_POINT:
-        case FIND_BORDERS_FAILED:
-        case NO_BORDERS:
+            ROS_ERROR("RobotDriver: no scan message");
             return report;
-            break;
-        default:
-            ROS_ERROR("RobotDriver: unkown error while getting target (%i)", e);
-            return report;
-            break;
         }
-    }
 
-    report.target = target;
+        report.last_scan = scan;
 
-    // Applying correction
-    std::vector<float> polyfit =
-        get_correction(target.points, target.first_edge_index, target.second_edge_index);
+        // Searching target
+        Target target;
+        try
+        {
+            target = get_target(scan);
+        }
+        catch (int e)
+        {
+            switch (e)
+            {
+            case NO_SCAN_POINT:
+            case FIND_BORDERS_FAILED:
+            case NO_BORDERS:
+                return report;
+                break;
+            default:
+                ROS_ERROR("RobotDriver: unkown error while getting target (%i)", e);
+                return report;
+                break;
+            }
+        }
 
-    report.polyfit = polyfit;
+        report.target = target;
 
-    float correction = polyfit[1];
+        // Applying correction
+        std::vector<float> polyfit =
+            get_correction(target.points, target.first_edge_index, target.second_edge_index);
 
-    if (std::abs(correction) > correction_threshold_)
-        turn(correction < 0, std::abs(correction));
+        report.polyfit = polyfit;
 
-    ROS_INFO("RobotDriver: correction made or no correction to be made (%.3f rad)", correction);
+        correction = polyfit[1];
+
+        if (std::abs(correction) >= correction_threshold_)
+        {
+            turn(correction < 0, std::abs(correction));
+            total_correction += correction;
+        }
+    } while (std::abs(correction) >= correction_threshold_);
+
+    ROS_INFO("RobotDriver: correction made or no correction to be made (%.3f rad)", total_correction);
 
     report.success = true;
     return report;
