@@ -1,4 +1,8 @@
+#include <chrono>
+#include <ctime>
+#include <cmath>
 #include <string>
+#include <cstdlib>
 #include <ros/ros.h>
 #include <std_msgs/Bool.h>
 #include <dynamic_reconfigure/server.h>
@@ -8,11 +12,14 @@
 #include "robot_main/data_exporter.h"
 
 bool execute_routine = false;
+int nb_test = 5;
 
 void reconfigure(robot_main::GlobalConfig &config, uint32_t level, RobotDriver &rd, Routine &routine)
 {
     rd.reconfigure(config.scan_range, config.correction_threshold, config.turn_speed, config.drive_speed, config.target_distance);
     routine.reconfigure(config.steps, config.step_distance);
+
+    nb_test = config.nb_test;
 }
 
 void routine_callback(const std_msgs::Bool::ConstPtr &msg)
@@ -48,46 +55,44 @@ int main(int argc, char **argv)
     f = boost::bind(&reconfigure, _1, _2, boost::ref(rd), boost::ref(routine));
     server.setCallback(f);
 
-    std::string report_folder = "/home/husarion/ros_workspace/reports/";
-    std::string after_correction_suffix = "_after";
-    std::string extension = ".csv";
+    std::string file_path = "/home/husarion/ros_workspace/data.csv";
 
-    // Main loop
-    int current_step = 0;
-    while (nh.ok())
+    std::ofstream log_file;
+    log_file.open(file_path);
+
+    log_file << "id,rotation,final" << std::endl;
+
+    float current_slope = rd.correct_angle().polyfit[1];
+    ROS_INFO("%i tests to do. Starting slope: %f", nb_test, current_slope);
+
+    for (int test = 0; test < nb_test; test++)
     {
-        ros::spinOnce();
-        loop_rate.sleep();
+        auto start = std::chrono::system_clock::now();
 
-        if (execute_routine && current_step < routine.steps)
-        {
-            ROS_DEBUG("RobotMain: routine step %i, angle correction...", current_step + 1);
+        float r = std::rand();
+        float angle = 0.02 + r / (RAND_MAX / 0.1);
 
-            CorrectionReport report = rd.correct_angle();
+        rd.turn(rand() > (RAND_MAX / 2), angle);
 
-            // Export report
-            std::string file_name = report_folder + std::to_string(current_step) + extension;
-            export_correction_report(report, file_name);
+        CorrectionReport report = rd.correct_angle();
 
-            // Export laser scan after correction
-            file_name = report_folder + std::to_string(current_step) + after_correction_suffix + extension;
-            auto scan = ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
-            export_laser_scan(scan, file_name);
+        log_file << test << "," << angle << "," << report.polyfit[1] << std::endl;
+    
+        auto end = std::chrono::system_clock::now();
 
-            ROS_DEBUG("RobotMain: routine step %i, driving to next stop", current_step + 1);
+        std::chrono::duration<double> elapsed_seconds = end - start;
+        double seconds = elapsed_seconds.count() * (nb_test - test - 1);
+        double s = fmod(seconds, 60.);
+        double m = seconds / 60;
+        double h = seconds / 3600; 
 
-            rd.drive(routine.step_distance);
-
-            ROS_DEBUG("RobotMain: routine step %i done", current_step + 1);
-
-            current_step ++;
-        }
-        else if (current_step == routine.steps)
-        {
-            execute_routine = false;
-            current_step = 0;
-        }
+        ROS_INFO("[%i] Rotation: %f ; Final: %f", test, angle, report.polyfit[1]);
+        ROS_INFO("Estimated remaining time %02.0f:%02.0f:%02.0f", h, m, s);
     }
+
+    log_file.close();
+
+    ROS_INFO("STOP");
 
     return 0;
 }
