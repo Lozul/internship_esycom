@@ -7,13 +7,26 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   robot_driver
   dynamic_reconfigure
+  message_generation
+)
+
+add_message_files(
+    FILES
+    Routine.msg
+)
+
+generate_messages(
+    DEPENDENCIES
+    std_msgs
 )
 
 generate_dynamic_reconfigure_options(
   cfg/Global.cfg
 )
 
-catkin_package()
+catkin_package(
+    CATKIN_DEPENDS message_runtime    
+)
 
 include_directories(
   include
