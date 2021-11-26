@@ -1,0 +1,7 @@
+#! /usr/bin/env python
+
+import robot_gui.gui
+
+
+if __name__ == "__main__":
+    robot_gui.gui.main()
