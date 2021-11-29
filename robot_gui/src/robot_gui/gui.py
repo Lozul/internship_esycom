@@ -58,7 +58,7 @@ class App(ttk.Frame):
 
         freq_select_button = ttk.Button(self, text='Freq', command=self.ask_freq)
 
-        self.progress = ttk.Progressbar(self, mode='determinate', variable=self.progress_var)
+        self.progress = ttk.Progressbar(self, mode='determinate', variable=self.progress_var, maximum=self.nb_steps.get())
 
         start_button = ttk.Button(self, text='Start', command=self.start_routine)
         stop_button = ttk.Button(self, text='Stop', command=self.stop_routine)
