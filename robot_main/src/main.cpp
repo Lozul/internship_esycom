@@ -7,6 +7,7 @@
 #include "robot_driver/robot_driver.h"
 #include "robot_main/Routine.h"
 #include "robot_main/data_exporter.h"
+#include "LMShid.h"
 
 robot_main::Routine routine;
 bool execute_routine = false;
@@ -37,6 +38,9 @@ void button_callback(const std_msgs::UInt8 &msg)
 
 int main(int argc, char **argv)
 {
+    fnLMS_Init();
+    fnLMS_SetTestMode(1);
+
     // ROS init
     ros::init(argc, argv, "robot_main_node");
     ros::NodeHandle nh("~");
@@ -70,6 +74,10 @@ int main(int argc, char **argv)
     std::string report_folder = "/home/husarion/ros_workspace/reports/";
     std::string after_correction_suffix = "_after";
     std::string extension = ".csv";
+
+    int nDevices = fnLMS_GetNumDevices();
+
+    ROS_INFO("%i devices located", nDevices);
 
     // Main loop
     int current_step = 0;

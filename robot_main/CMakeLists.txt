@@ -30,13 +30,18 @@ catkin_package(
 
 include_directories(
   include
+  /usr/include
   ${catkin_INCLUDE_DIRS}
 )
 
-add_executable(${PROJECT_NAME}_node src/main.cpp src/data_exporter.cpp)
+# add_library(lmshidLib STATIC IMPORTED)
+# set_target_properties(lmshidLib PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/lib/LMShid.so)
+
+add_executable(${PROJECT_NAME}_node src/main.cpp src/data_exporter.cpp src/LMShid.c)
 
 add_dependencies(${PROJECT_NAME}_node ${PROJECT_NAME}_gencfg)
 
 target_link_libraries(${PROJECT_NAME}_node
   ${catkin_LIBRARIES}
+  usb
 )
