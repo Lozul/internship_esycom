@@ -39,7 +39,7 @@ void button_callback(const std_msgs::UInt8 &msg)
 int main(int argc, char **argv)
 {
     fnLMS_Init();
-    fnLMS_SetTestMode(1);
+    fnLMS_SetTestMode(false);
 
     // ROS init
     ros::init(argc, argv, "robot_main_node");
@@ -93,7 +93,12 @@ int main(int argc, char **argv)
     int status = fnLMS_InitDevice(generator_id);
     ROS_INFO("RobotMain: generator status: %s", fnLMS_perror(status));
 
-    if (status & ERROR_STATUS_MASK) return 1;
+    sleep(1);
+
+    status = fnLMS_SetRFOn(generator_id, false);
+    ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
+
+    status = fnLMS_SetPowerLevel(generator_id, -15 * 4);
 
     // Main loop
     int current_step = 0;
@@ -119,7 +124,16 @@ int main(int argc, char **argv)
 
             ROS_INFO("RobotMain: routine step %i, emit frequency %i", current_step + 1, routine.freq);
 
-            // TODO
+            status = fnLMS_SetFrequency(generator_id, routine.freq);
+            ROS_INFO("RobotMain: SetFrequency: %s", fnLMS_perror(status));
+
+            status = fnLMS_SetRFOn(generator_id, true);
+            ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
+
+            sleep(2);
+
+            status = fnLMS_SetRFOn(generator_id, false);
+            ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
 
             ROS_DEBUG("RobotMain: routine step %i, driving to next stop", current_step + 1);
 
@@ -146,6 +160,9 @@ int main(int argc, char **argv)
             current_step = 0;
         }
     }
+
+    status = fnLMS_CloseDevice(generator_id);
+    ROS_DEBUG("RobotMain: generator status: %s", fnLMS_perror(status));
 
     return 0;
 }
