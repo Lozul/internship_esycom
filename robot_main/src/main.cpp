@@ -75,9 +75,25 @@ int main(int argc, char **argv)
     std::string after_correction_suffix = "_after";
     std::string extension = ".csv";
 
-    int nDevices = fnLMS_GetNumDevices();
+    // LMS device
+    int nb_plugged = fnLMS_GetNumDevices();
 
-    ROS_INFO("%i devices located", nDevices);
+    if (nb_plugged == 0)
+    {
+        ROS_ERROR("RobotMain: no Vaunix LMS devices located.");
+        return 1;
+    }
+
+    DEVID generator_id;
+    DEVID active_devices[MAXDEVICES];
+
+    fnLMS_GetDevInfo(active_devices);
+    generator_id = active_devices[0];
+
+    int status = fnLMS_InitDevice(generator_id);
+    ROS_INFO("RobotMain: generator status: %s", fnLMS_perror(status));
+
+    if (status & ERROR_STATUS_MASK) return 1;
 
     // Main loop
     int current_step = 0;
