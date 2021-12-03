@@ -163,7 +163,7 @@ Target get_target(sensor_msgs::LaserScanConstPtr scan)
         if (angle > -(M_PI / 2) && angle < (M_PI / 2))
             continue;
 
-        // Save valid point
+        // Save valid point TODO: doc offset 0.0246
         Point p;
         p.range = range;
         p.angle = angle - 0.0246;

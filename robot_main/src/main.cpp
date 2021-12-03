@@ -23,7 +23,8 @@ void set_routine_callback(const robot_main::RoutineConstPtr &msg)
     
     routine.nb_steps = msg->nb_steps;
     routine.step_distance = msg->step_distance;
-    routine.freq = msg->freq;
+    routine.frequency = msg->frequency;
+    routine.power_level = msg->power_level;
 }
 
 void start_routine_callback(const std_msgs::Bool &msg)
@@ -53,7 +54,8 @@ int main(int argc, char **argv)
     // Routine init
     routine.nb_steps = 0;
     routine.step_distance = 0.0;
-    routine.freq = 0;
+    routine.frequency = 0;
+    routine.power_level = 0;
 
     // Subscribers
     // ros::Subscriber sub_buttons = nh.subscribe("/buttons", 1, &RobotDriver::button_input, &rd);
@@ -98,8 +100,6 @@ int main(int argc, char **argv)
     status = fnLMS_SetRFOn(generator_id, false);
     ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
 
-    status = fnLMS_SetPowerLevel(generator_id, -15 * 4);
-
     // Main loop
     int current_step = 0;
     while (nh.ok())
@@ -122,9 +122,12 @@ int main(int argc, char **argv)
             // auto scan = ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
             // export_laser_scan(scan, file_name);
 
-            ROS_INFO("RobotMain: routine step %i, emit frequency %i", current_step + 1, routine.freq);
+            ROS_INFO("RobotMain: routine step %i, emit frequency %i", current_step + 1, routine.frequency);
 
-            status = fnLMS_SetFrequency(generator_id, routine.freq);
+            status = fnLMS_SetPowerLevel(generator_id, routine.power_level);
+            ROS_INFO("RobotMain: SetPowerLevel: %s", fnLMS_perror(status));
+
+            status = fnLMS_SetFrequency(generator_id, routine.frequency);
             ROS_INFO("RobotMain: SetFrequency: %s", fnLMS_perror(status));
 
             status = fnLMS_SetRFOn(generator_id, true);

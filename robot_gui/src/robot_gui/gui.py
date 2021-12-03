@@ -10,12 +10,10 @@ from robot_main.msg import Routine
 from std_msgs.msg import Bool, UInt8
 
 from lmshid_bindings import lib
+from generator_gui import GeneratorGUI
 
 set_routine = None
 start_routine = None
-
-def to_ghz(freq_10hz):
-    return freq_10hz / 1.0e8 
 
 # ttk.Spinbox is missing in Python 3.6
 class Spinbox(ttk.Entry):
@@ -24,9 +22,12 @@ class Spinbox(ttk.Entry):
     def set(self, value):
         self.tk.call(self._w, "set", value)
 
-class App(ttk.Frame):
-    def __init__(self, master=None):
-        ttk.Frame.__init__(self, master)
+class GUI(ttk.Frame):
+    def __init__(self, root, source_id):
+        ttk.Frame.__init__(self, root)
+
+        self.source_id = source_id
+        self.routine = Routine()
 
         self.nb_steps = IntVar()
         self.nb_steps.set(1)
@@ -37,13 +38,6 @@ class App(ttk.Frame):
 
         self.progress_var = IntVar()
         self.progress_var.set(0)
-
-        self.freq_var = DoubleVar()
-        self.freq_var.set(to_ghz(lib.fnLMS_GetFrequency(1)))
-
-        self.freq_min = to_ghz(lib.fnLMS_GetMinFreq(1))
-        self.freq_max = to_ghz(lib.fnLMS_GetMaxFreq(1))
-        print(self.freq_min, self.freq_max)
 
         self.create_widgets()
 
@@ -76,11 +70,10 @@ class App(ttk.Frame):
             child.grid(padx=5, pady=5)
 
     def start_routine(self):
-        nb_steps = int(self.nb_steps_entry.get())
-        step_distance = self.step_distance.get()
-        freq = int(floor(self.freq_var.get() * 1e8))
+        self.routine.nb_steps = int(self.nb_steps_entry.get())
+        self.routine.step_distance = self.step_distance.get()
 
-        set_routine.publish(Routine(nb_steps, step_distance, freq))
+        set_routine.publish(self.routine)
         start_routine.publish(True)
 
     def stop_routine(self):
@@ -91,13 +84,16 @@ class App(ttk.Frame):
 
     def ask_freq(self):
         def dismiss():
+            self.routine.frequency = r.frequency
+            self.routine.power_level = r.power_level
             dlg.grab_release()
             dlg.destroy()
 
-        dlg = Toplevel(self)
+        r = Routine()
 
-        ttk.Label(dlg, text='Frequency (GHz)').grid(sticky=W)
-        Spinbox(dlg, from_=self.freq_min, to=self.freq_max, increment=0.1, textvariable=self.freq_var, format="%.3f").grid() 
+        dlg = Toplevel(self)
+        gen_gui = GeneratorGUI(dlg, self.source_id, r)
+        
         ttk.Button(dlg, text='Done', command=dismiss).grid(padx=12, pady=12)
 
         dlg.protocol("WM_DELETE_WINDOW", dismiss)
@@ -113,6 +109,8 @@ class App(ttk.Frame):
 
 def main():
     global set_routine, start_routine
+
+    test_mode = False
     devices_array = c_uint * 10
 
     # ROS
@@ -123,7 +121,10 @@ def main():
 
     # LMS
     lib.fnLMS_Init()
-    lib.fnLMS_SetTestMode(False)
+    lib.fnLMS_SetTestMode(test_mode)
+
+    if test_mode:
+        print("Running GUI in test mode")
 
     num_devices = lib.fnLMS_GetNumDevices()
     
@@ -146,9 +147,9 @@ def main():
     root = Tk()
     root.title("Robot GUI")
 
-    app = App(root)
+    gui = GUI(root, source_id)
 
-    rospy.Subscriber('routine_progress', UInt8, app.step_routine)
+    rospy.Subscriber('routine_progress', UInt8, gui.step_routine)
 
     root.mainloop()
 
