@@ -320,10 +320,9 @@ CorrectionReport RobotDriver::correct_angle()
 
 bool RobotDriver::turn(bool clockwise, float radians)
 {
-    ROS_INFO("RobotDriver: turn function received %.3f", radians);
     while (radians < 0) radians += 2 * M_PI;
     while (radians > 2*M_PI) radians -= 2 * M_PI;
-    ROS_INFO("RobotDriver: turning %.3f", radians);
+    ROS_DEBUG("RobotDriver: turning %.3f", radians);
 
     // We will record transforms here
     tf::StampedTransform start_transform;
