@@ -1,5 +1,5 @@
 <launch>
-    <env name="ROSCONSOLE_FORMAT" value="[${severity}] [${node}]: $message" />
+<env name="ROSCONSOLE_FORMAT" value="[${severity}] [${node}]: ${message}" />
     <env name="ROSCONSOLE_CONFIG_FILE" value="$(find robot_main)/custom_rosconsole.config" />
 
     <include file="$(find rplidar_ros)/launch/rplidar_a3.launch" />
@@ -7,4 +7,5 @@
     <node pkg="tf" type="static_transform_publisher" name="laser_broadcaster" args="0 0 0.1 3.14 0 0 base_link laser 100" />
 
     <node pkg="robot_driver" type="get_correction_server.py" name="get_correction_server" output="screen" required="true" />
+    <node pkg="robot_driver" type="test_correction_server.py" name="test_correction_server" output="screen" required="true" />
 </launch>
