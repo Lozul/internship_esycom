@@ -78,27 +78,30 @@ int main(int argc, char **argv)
     std::string extension = ".csv";
 
     // LMS device
+    DEVID generator_id;
+    int status = 0;
+
     int nb_plugged = fnLMS_GetNumDevices();
+    bool use_generator = nb_plugged == 1;
 
     if (nb_plugged == 0)
+        ROS_WARN("RobotMain: no Vaunix LMS devices located.");
+
+    if (use_generator)
     {
-        ROS_ERROR("RobotMain: no Vaunix LMS devices located.");
-        return 1;
+        DEVID active_devices[MAXDEVICES];
+
+        fnLMS_GetDevInfo(active_devices);
+        generator_id = active_devices[0];
+
+        status = fnLMS_InitDevice(generator_id);
+        ROS_INFO("RobotMain: generator status: %s", fnLMS_perror(status));
+
+        sleep(1);
+
+        status = fnLMS_SetRFOn(generator_id, false);
+        ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
     }
-
-    DEVID generator_id;
-    DEVID active_devices[MAXDEVICES];
-
-    fnLMS_GetDevInfo(active_devices);
-    generator_id = active_devices[0];
-
-    int status = fnLMS_InitDevice(generator_id);
-    ROS_INFO("RobotMain: generator status: %s", fnLMS_perror(status));
-
-    sleep(1);
-
-    status = fnLMS_SetRFOn(generator_id, false);
-    ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
 
     // Main loop
     int current_step = 0;
@@ -109,40 +112,44 @@ int main(int argc, char **argv)
 
         if (execute_routine && current_step < routine.nb_steps)
         {
-            // ROS_DEBUG("RobotMain: routine step %i, angle correction...", current_step + 1);
+            ROS_INFO("RobotMain: === Routine step %i ===", current_step + 1);
 
-            // CorrectionReport report = rd.correct_angle();
+            // ROS_DEBUG("RobotMain: routine step %i, angle correction...", current_step + 1);
+            CorrectionReport report = rd.correct_angle();
 
             // Export report
-            // std::string file_name = report_folder + std::to_string(current_step) + extension;
-            // export_correction_report(report, file_name);
+            std::string file_name = report_folder + std::to_string(current_step) + extension;
+            export_correction_report(report, file_name);
 
             // Export laser scan after correction
-            // file_name = report_folder + std::to_string(current_step) + after_correction_suffix + extension;
-            // auto scan = ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
-            // export_laser_scan(scan, file_name);
+            file_name = report_folder + std::to_string(current_step) + after_correction_suffix + extension;
+            auto scan = ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
+            export_laser_scan(scan, file_name);
 
-            ROS_INFO("RobotMain: routine step %i, emit frequency %i", current_step + 1, routine.frequency);
+            if (use_generator)
+            {
+                ROS_INFO("RobotMain: routine step %i, emit frequency %i", current_step + 1, routine.frequency);
 
-            status = fnLMS_SetPowerLevel(generator_id, routine.power_level);
-            ROS_INFO("RobotMain: SetPowerLevel: %s", fnLMS_perror(status));
+                status = fnLMS_SetPowerLevel(generator_id, routine.power_level);
+                ROS_INFO("RobotMain: SetPowerLevel: %s", fnLMS_perror(status));
 
-            status = fnLMS_SetFrequency(generator_id, routine.frequency);
-            ROS_INFO("RobotMain: SetFrequency: %s", fnLMS_perror(status));
+                status = fnLMS_SetFrequency(generator_id, routine.frequency);
+                ROS_INFO("RobotMain: SetFrequency: %s", fnLMS_perror(status));
 
-            status = fnLMS_SetRFOn(generator_id, true);
-            ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
+                status = fnLMS_SetRFOn(generator_id, true);
+                ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
 
-            sleep(2);
+                sleep(2);
 
-            status = fnLMS_SetRFOn(generator_id, false);
-            ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
+                status = fnLMS_SetRFOn(generator_id, false);
+                ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
 
-            ROS_DEBUG("RobotMain: routine step %i, driving to next stop", current_step + 1);
+                ROS_DEBUG("RobotMain: routine step %i, driving to next stop", current_step + 1);
+            }
 
-            // rd.drive(routine.step_distance);
+            rd.drive(routine.step_distance);
 
-            ROS_INFO("RobotMain: routine step %i done", current_step + 1);
+            ROS_INFO("RobotMain: step %i done", current_step + 1);
 
             current_step ++;
             
@@ -163,9 +170,12 @@ int main(int argc, char **argv)
             current_step = 0;
         }
     }
-
-    status = fnLMS_CloseDevice(generator_id);
-    ROS_DEBUG("RobotMain: generator status: %s", fnLMS_perror(status));
+    
+    if (use_generator)
+    {
+        status = fnLMS_CloseDevice(generator_id);
+        ROS_DEBUG("RobotMain: generator status: %s", fnLMS_perror(status));
+    }
 
     return 0;
 }
