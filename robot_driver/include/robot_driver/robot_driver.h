@@ -67,6 +67,9 @@ private:
     float drive_speed_;
     float target_distance_;
 
+    float max_speed_ = 1.0;
+    float error_margin_ = 1.01359;
+
 public:
     RobotDriver(ros::NodeHandle nh);
     RobotDriver(ros::NodeHandle nh, float scan_range, float correction_threshold, float turn_speed, float drive_speed, float target_distance);

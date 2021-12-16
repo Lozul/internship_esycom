@@ -387,6 +387,54 @@ bool RobotDriver::turn(bool clockwise, float radians)
 
 float RobotDriver::drive(float distance)
 {
+    // Drive settings
+    float xf = distance * error_margin_;
+
+    float cruise_speed = std::min(xf / 2, max_speed_);
+    float T = 1.5 * (xf / cruise_speed);
+
+    float frequency = 100;
+    float time_step = 1.0 / frequency;
+
+    float t = 0;
+    bool done = false;
+
+    // ROS
+    geometry_msgs::Twist move;
+    ros::Rate rate(frequency);
+
+    while (!done && nh_.ok())
+    {
+        // Determining speed
+        if (0 <= t && t < T / 3)
+            move.linear.x = (3 * cruise_speed * t) / T;
+        else if (T / 3 <= t && t < 2 * T / 3)
+            move.linear.x = cruise_speed;
+        else if (2 * T / 3 <= t <= T)
+            move.linear.x = 3 * cruise_speed * (1 - t / T);
+
+        pub_cmd_vel_.publish(move);
+
+        // Increasing time counter
+        t += time_step;
+
+        // Pause
+        rate.sleep();
+
+        // If total time is elapsed, finish driving
+        done = t > T;
+    }
+
+    // To be sure that robot is stopped
+    move.linear.x = 0;
+    pub_cmd_vel_.publish(move);
+
+    // TODO: return traveled distance (using laser?)
+    return 0;
+}
+
+/*float RobotDriver::drive(float distance)
+{
     // We will record position here
     geometry_msgs::Point start_position;
     geometry_msgs::Point current_position;
@@ -439,7 +487,7 @@ float RobotDriver::drive(float distance)
     target_distance_ -= dist_moved;
 
     return dist_moved;
-}
+}*/
 
 void sayHello()
 {
