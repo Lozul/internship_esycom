@@ -45,5 +45,6 @@ install(
 
 catkin_install_python(PROGRAMS
   scripts/get_correction_server.py
+  scripts/test_correction_server.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

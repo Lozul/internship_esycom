@@ -12,6 +12,13 @@ def polar_cartesian(p):
     return r * sin(np.pi - a), r * cos(np.pi - a)
 
 
+def export_scan(scan, filename="data.csv"):
+    with open("/home/husarion/ros_workspace/{0}".format(filename), mode='w') as f:
+        for p in scan:
+            a, r = p
+            f.write("{0}, {1}\n".format(a, r))
+
+
 def hand_get_correction(req):
     resp = GetCorrectionResponse(False, 0)
 
@@ -30,7 +37,7 @@ def hand_get_correction(req):
     points = scan[mask]
 
     if len(points) == 0:
-        rospy.logerror("No points in range")
+        rospy.logerr("No points in range")
         return resp
 
     ## Remove laser angle error
@@ -41,21 +48,23 @@ def hand_get_correction(req):
     points = points[mask]
 
     if len(points) == 0:
-        rospy.logerror("No points in front")
+        rospy.logerr("No points in front")
         return resp
 
     ## Extract target points
     ### Estimate target distance
-    first_range, last_range = valid_points[0, 1], valid_points[-1, 1]
+    first_range, last_range = points[0, 1], points[-1, 1]
 
     if abs(first_range - last_range) > 0.01:
-        rospy.logerror("Difference between first and last range of scan: %f and %f", first_range, last_range)
+        rospy.logerr("Difference between first and last range of scan: %f and %f", first_range, last_range)
         return resp
 
     target_distance = (first_range + last_range) / 2
 
     ### Angle range to scan based on target_distance
     theta_angle = np.pi - atan(0.5 / target_distance)
+
+    rospy.loginfo("Target: %.2f m || Theta: %.2f rad", target_distance, theta_angle)
 
     ### Keep valid target points
     accuracy = 1
@@ -81,9 +90,11 @@ def hand_get_correction(req):
     mask = [is_valid(p) for p in points]
     points = points[mask]
 
-    if len(points):
-        rospy.logerror("No valid target points")
+    if len(points) == 0:
+        rospy.logerr("No valid target points")
         return resp
+
+    export_scan(points)
 
     # Estimate target slope, therefore angle to correct
     points_cartesian = np.array([polar_cartesian(p) for p in points])
