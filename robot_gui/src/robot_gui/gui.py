@@ -30,11 +30,11 @@ class GUI(ttk.Frame):
         self.routine = Routine()
 
         self.nb_steps = IntVar()
-        self.nb_steps.set(1)
+        self.nb_steps.set(10)
         self.nb_steps.trace("w", self.nb_steps_changed)
 
         self.step_distance = DoubleVar()
-        self.step_distance.set(1.0)
+        self.step_distance.set(0.2)
 
         self.progress_var = IntVar()
         self.progress_var.set(0)
@@ -51,6 +51,9 @@ class GUI(ttk.Frame):
         self.step_distance_entry = ttk.Entry(self, textvariable=self.step_distance)
 
         freq_select_button = ttk.Button(self, text='Freq', command=self.ask_freq)
+
+        if self.source_id == -1:
+            freq_select_button["state"] = "disable"
 
         self.progress = ttk.Progressbar(self, mode='determinate', variable=self.progress_var, maximum=self.nb_steps.get())
 
@@ -120,6 +123,8 @@ def main():
     start_routine = rospy.Publisher('start_routine', Bool, queue_size=1)
 
     # LMS
+    source_id = -1
+
     lib.fnLMS_Init()
     lib.fnLMS_SetTestMode(test_mode)
 
@@ -131,17 +136,19 @@ def main():
     active_devices = devices_array()
     num_actives = lib.fnLMS_GetDevInfo(active_devices)
 
+    use_generator = num_actives == 1
+
     if num_actives == 0:
         print("No active device")
-        return
 
-    source_id = active_devices[0]
+    if use_generator:
+        source_id = active_devices[0]
 
-    status = lib.fnLMS_InitDevice(source_id)
-    print("Source: {0}".format(lib.fnLMS_perror(status).decode('UTF-8')))
+        status = lib.fnLMS_InitDevice(source_id)
+        print("Source: {0}".format(lib.fnLMS_perror(status).decode('UTF-8')))
 
-    print("Please wait.")
-    sleep(1)
+        print("Please wait.")
+        sleep(1)
 
     # Interface
     root = Tk()
