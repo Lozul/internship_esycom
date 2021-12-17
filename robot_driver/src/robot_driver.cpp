@@ -18,6 +18,15 @@ RobotDriver::RobotDriver(ros::NodeHandle nh, float scan_range, float correction_
 
     pub_cmd_vel_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
 
+    ROS_INFO("Waiting for get_correction service");
+    bool srv_ok = ros::service::waitForService("get_correction");
+
+    if (!srv_ok)
+    {
+        ROS_ERROR("get_correction timed out");
+        throw std::runtime_error("timeout");
+    }
+
     // Wait for the listener to get the first message
     ros::Duration timeout(10.0);
     bool tf_ok = listener_.waitForTransform("base_link", "odom",
@@ -258,52 +267,25 @@ CorrectionReport RobotDriver::correct_angle()
     float correction = 1;
     float total_correction = 0;
 
+    ROS_INFO("Waiting for get_correction service");
+    ros::service::waitForService("get_correction");
+
+    robot_driver::GetCorrection srv;
+
     do 
     {
-        // Get laser data
-        ROS_DEBUG("RobotDriver: getting laser data...");
-        sensor_msgs::LaserScanConstPtr scan =
-            ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
-
-        if (!scan)
+        if (!ros::service::call("get_correction", srv))
         {
-            ROS_ERROR("RobotDriver: no scan message");
+            ROS_ERROR("Failed to call service get_correction");
+            return report;
+        }
+        else if (!srv.response.success)
+        {
+            ROS_ERROR("get_correction service failed");
             return report;
         }
 
-        report.last_scan = scan;
-
-        // Searching target
-        Target target;
-        try
-        {
-            target = get_target(scan);
-        }
-        catch (int e)
-        {
-            switch (e)
-            {
-            case NO_SCAN_POINT:
-            case FIND_BORDERS_FAILED:
-            case NO_BORDERS:
-                return report;
-                break;
-            default:
-                ROS_ERROR("RobotDriver: unkown error while getting target (%i)", e);
-                return report;
-                break;
-            }
-        }
-
-        report.target = target;
-
-        // Applying correction
-        std::vector<float> polyfit =
-            get_correction(target.points, target.first_edge_index, target.second_edge_index);
-
-        report.polyfit = polyfit;
-
-        correction = polyfit[1];
+        correction = srv.response.angle;
 
         if (std::abs(correction) >= correction_threshold_)
         {
@@ -432,62 +414,6 @@ float RobotDriver::drive(float distance)
     // TODO: return traveled distance (using laser?)
     return 0;
 }
-
-/*float RobotDriver::drive(float distance)
-{
-    // We will record position here
-    geometry_msgs::Point start_position;
-    geometry_msgs::Point current_position;
-
-    // Record the starting position
-    auto ptr = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("/pose");
-
-    if (!ptr)
-    {
-        ROS_ERROR("RobotDriver: failed to record starting position");
-        return 0;
-    }
-
-    start_position = ptr->pose.position;
-
-    // We will be sending commands of type `Twist`
-    geometry_msgs::Twist move;
-    move.linear.y = move.angular.z = 0;
-    move.linear.x = drive_speed_;
-
-    // Begin driving
-    float dist_moved;
-    ros::Rate rate(100);
-    bool done = false;
-    while (!done && nh_.ok())
-    {
-        pub_cmd_vel_.publish(move);
-        rate.sleep();
-
-        // Get the current position
-        auto ptr = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("/pose");
-
-        if (!ptr)
-        {
-            ROS_ERROR("RobotDriver: failed to get current position");
-            return 0;
-        }
-
-        current_position = ptr->pose.position;
-        dist_moved = current_position.x - start_position.x;
-
-        if (dist_moved >= distance) done = true;
-    }
-
-    // Stop movement
-    move.linear.x = 0;
-    pub_cmd_vel_.publish(move);
-
-    // Update target distance
-    target_distance_ -= dist_moved;
-
-    return dist_moved;
-}*/
 
 void sayHello()
 {

@@ -15,6 +15,7 @@
 #include <sensor_msgs/LaserScan.h>
 #include <tf/transform_listener.h>
 #include "polyfit/PolyfitBoost.hpp"
+#include "robot_driver/GetCorrection.h"
 
 #define NO_SCAN_POINT 100
 #define FIND_BORDERS_FAILED 101

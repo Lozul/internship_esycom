@@ -55,8 +55,8 @@ def hand_get_correction(req):
     ### Estimate target distance
     first_range, last_range = points[0, 1], points[-1, 1]
 
-    if abs(first_range - last_range) > 0.01:
-        rospy.logerr("Difference between first and last range of scan: %f and %f", first_range, last_range)
+    if abs(first_range - last_range) > 0.1:
+        rospy.logerr("Difference between first and last range of scan: [%f, %f] and [%f, %f]", points[0, 0], points[0, 1], points[-1, 0], points[-1, 1])
         return resp
 
     target_distance = (first_range + last_range) / 2

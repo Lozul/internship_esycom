@@ -117,14 +117,14 @@ int main(int argc, char **argv)
             // ROS_DEBUG("RobotMain: routine step %i, angle correction...", current_step + 1);
             CorrectionReport report = rd.correct_angle();
 
-            // Export report
-            std::string file_name = report_folder + std::to_string(current_step) + extension;
-            export_correction_report(report, file_name);
-
-            // Export laser scan after correction
-            file_name = report_folder + std::to_string(current_step) + after_correction_suffix + extension;
-            auto scan = ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
-            export_laser_scan(scan, file_name);
+//            // Export report
+//            std::string file_name = report_folder + std::to_string(current_step) + extension;
+//            export_correction_report(report, file_name);
+//
+//            // Export laser scan after correction
+//            file_name = report_folder + std::to_string(current_step) + after_correction_suffix + extension;
+//            auto scan = ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
+//            export_laser_scan(scan, file_name);
 
             if (use_generator)
             {
