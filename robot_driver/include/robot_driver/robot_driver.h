@@ -68,7 +68,8 @@ private:
     float drive_speed_;
     float target_distance_;
 
-    float max_speed_ = 1.0;
+    float max_drive_speed_ = 1.0;
+    float max_turn_speed_ = 7.33;
     float error_margin_ = 1.01359;
 
 public:
@@ -131,7 +132,7 @@ public:
 
     CorrectionReport correct_angle();
 
-    bool turn(bool clockwise, float radians);
+    bool turn(float radians);
     float drive(float distance);
 };
 
