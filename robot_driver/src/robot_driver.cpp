@@ -27,11 +27,10 @@ RobotDriver::RobotDriver(ros::NodeHandle nh)
     }
 }
 
-CorrectionReport RobotDriver::correct_angle()
+bool RobotDriver::correct_angle()
 {
     // Init report
-    CorrectionReport report;
-    report.success = false;
+    bool success = false;
 
     float correction = 1;
     float total_correction = 0;
@@ -46,12 +45,12 @@ CorrectionReport RobotDriver::correct_angle()
         if (!ros::service::call("get_correction", srv))
         {
             ROS_ERROR("Failed to call service get_correction");
-            return report;
+            return success;
         }
         else if (!srv.response.success)
         {
             ROS_ERROR("get_correction service failed");
-            return report;
+            return success;
         }
 
         correction = srv.response.angle;
@@ -65,8 +64,8 @@ CorrectionReport RobotDriver::correct_angle()
 
     ROS_INFO("RobotDriver: correction made or no correction to be made (%.3f rad)", total_correction);
 
-    report.success = true;
-    return report;
+    success = true;
+    return success;
 }
 
 bool RobotDriver::turn(bool clockwise, float radians)

@@ -37,7 +37,7 @@ include_directories(
 # add_library(lmshidLib STATIC IMPORTED)
 # set_target_properties(lmshidLib PROPERTIES IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/lib/LMShid.so)
 
-add_executable(${PROJECT_NAME}_node src/main.cpp src/data_exporter.cpp src/LMShid.c)
+add_executable(${PROJECT_NAME}_node src/main.cpp src/LMShid.c)
 
 add_dependencies(${PROJECT_NAME}_node ${PROJECT_NAME}_gencfg)
 

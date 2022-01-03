@@ -28,9 +28,7 @@ int main(int argc, char **argv)
 
         rd.turn(rand() > (RAND_MAX / 2), angle);
 
-        CorrectionReport report = rd.correct_angle();
-
-        log_file << test << "," << angle << "," << report.polyfit[1] << std::endl;
+        rd.correct_angle();
 
         std::cout << "[";
         int pos = test * 70 / nb_tests;

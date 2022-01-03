@@ -6,7 +6,6 @@
 #include <robot_main/GlobalConfig.h>
 #include "robot_driver/robot_driver.h"
 #include "robot_main/Routine.h"
-#include "robot_main/data_exporter.h"
 #include "LMShid.h"
 
 robot_main::Routine routine;
@@ -114,17 +113,7 @@ int main(int argc, char **argv)
         {
             ROS_INFO("RobotMain: === Routine step %i ===", current_step + 1);
 
-            // ROS_DEBUG("RobotMain: routine step %i, angle correction...", current_step + 1);
-            CorrectionReport report = rd.correct_angle();
-
-//            // Export report
-//            std::string file_name = report_folder + std::to_string(current_step) + extension;
-//            export_correction_report(report, file_name);
-//
-//            // Export laser scan after correction
-//            file_name = report_folder + std::to_string(current_step) + after_correction_suffix + extension;
-//            auto scan = ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
-//            export_laser_scan(scan, file_name);
+            rd.correct_angle();
 
             if (use_generator)
             {
