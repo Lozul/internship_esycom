@@ -13,7 +13,6 @@ int main(int argc, char **argv)
     ros::Rate loop_rate(10);
 
     RobotDriver rd(nh);
-    rd.reconfigure(2.9, 0.005, 0.005, 0.15, 0);
     
     std::string file_name = "/home/husarion/ros_workspace/data.csv";
     std::ofstream log_file;

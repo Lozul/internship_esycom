@@ -1,20 +1,8 @@
 #include "robot_driver/robot_driver.h"
 
 RobotDriver::RobotDriver(ros::NodeHandle nh)
-    : RobotDriver(nh, 0, 0, 0, 0, 0)
-{}
-
-RobotDriver::RobotDriver(ros::NodeHandle nh, float scan_range, float correction_threshold, float turn_speed, float drive_speed, float target_distance)
 {
-    if (scan_range < 0)
-        scan_range = -scan_range;
-
     nh_ = nh;
-    scan_range_ = scan_range;
-    correction_threshold_ = correction_threshold;
-    turn_speed_ = turn_speed;
-    drive_speed_ = drive_speed;
-    target_distance_ = target_distance;
 
     pub_cmd_vel_ = nh_.advertise<geometry_msgs::Twist>("/cmd_vel", 1);
 
@@ -37,30 +25,6 @@ RobotDriver::RobotDriver(ros::NodeHandle nh, float scan_range, float correction_
         ROS_ERROR("RobotDriver: TransformListener timed out after %i", timeout.sec);
         throw std::runtime_error("timeout");
     }
-}
-
-void RobotDriver::button_input(const std_msgs::UInt8 &msg)
-{
-    if (msg.data == 1)
-        correct_angle();
-    else
-        turn(false, M_PI / 2);
-}
-
-void RobotDriver::reconfigure(float scan_range, float correction_threshold, float turn_speed, float drive_speed, float target_distance)
-{
-    ROS_DEBUG("RobotDriver: reconfigure request:\n"
-        "\tscan_range: %.3f\n"
-        "\tcorrection_threshold: %.2f\n"
-        "\tturn_speed: %.3f\n"
-        "\tdrive_speed: %.3f",
-        scan_range, correction_threshold, turn_speed, drive_speed);
-
-    scan_range_ = scan_range;
-    correction_threshold_ = correction_threshold;
-    turn_speed_ = turn_speed;
-    drive_speed_ = drive_speed;
-    target_distance_ = target_distance;
 }
 
 bool compare_float(float a, float b, float epsilon = 0.05)
@@ -318,8 +282,9 @@ bool RobotDriver::turn(bool clockwise, float radians)
     geometry_msgs::Twist move;
 
     // The command will be to turn at turn_speed_ rad/s
+    float turn_speed = 0.005;
     move.linear.x = move.linear.y = 0;
-    move.angular.z = clockwise ? -turn_speed_ : turn_speed_;
+    move.angular.z = clockwise ? -turn_speed : turn_speed;
 
     // The axis we want to be rotating by
     tf::Vector3 desired_turn_axis(0, 0, clockwise ? 1 : -1);
