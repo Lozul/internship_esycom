@@ -105,9 +105,6 @@ def hand_get_correction(req):
     # Return result
     resp.success = True
     resp.angle = correction
-
-    rospy.loginfo("Sending %f rad", resp.angle)
-
     return resp
 
 

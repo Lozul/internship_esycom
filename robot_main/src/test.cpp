@@ -27,7 +27,7 @@ int main(int argc, char **argv)
         float r = rand();
         float angle = 0.02 + r / (RAND_MAX / 0.1);
 
-        rd.turn(angle);
+        rd.turn(rand() > (RAND_MAX / 2), angle);
 
         CorrectionReport report = rd.correct_angle();
 

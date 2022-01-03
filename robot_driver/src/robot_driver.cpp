@@ -44,7 +44,7 @@ void RobotDriver::button_input(const std_msgs::UInt8 &msg)
     if (msg.data == 1)
         correct_angle();
     else
-        turn(M_PI / 2);
+        turn(false, M_PI / 2);
 }
 
 void RobotDriver::reconfigure(float scan_range, float correction_threshold, float turn_speed, float drive_speed, float target_distance)
@@ -289,7 +289,7 @@ CorrectionReport RobotDriver::correct_angle()
 
         if (std::abs(correction) >= correction_threshold_)
         {
-            turn(correction);
+            turn(correction < 0, std::abs(correction));
             total_correction += correction;
         }
     } while (std::abs(correction) >= correction_threshold_);
@@ -300,54 +300,71 @@ CorrectionReport RobotDriver::correct_angle()
     return report;
 }
 
-bool RobotDriver::turn(float radians)
+bool RobotDriver::turn(bool clockwise, float radians)
 {
-    // Drive settings
-    float theta = radians;
+    while (radians < 0) radians += 2 * M_PI;
+    while (radians > 2*M_PI) radians -= 2 * M_PI;
+    ROS_DEBUG("RobotDriver: turning %.3f", radians);
 
-    float cruise_speed = std::max(std::min(theta / 2, max_turn_speed_), -max_turn_speed_);
-    float T = 1.5 * (theta / cruise_speed);
+    // We will record transforms here
+    tf::StampedTransform start_transform;
+    tf::StampedTransform current_transform;
 
-    float frequency = 100;
-    float time_step = 1.0 / frequency;
+    // Record the starting transform from the odometry to the base link
+    listener_.lookupTransform("base_link", "odom",
+        ros::Time(0), start_transform);
 
-    float t = 0;
-    bool done = false;
-
-    ROS_INFO("Cruise speed: %f | T: %f", cruise_speed, T);
-
-    // ROS
+    // We will be sending commands of type "twist"
     geometry_msgs::Twist move;
-    ros::Rate rate(frequency);
 
+    // The command will be to turn at turn_speed_ rad/s
+    move.linear.x = move.linear.y = 0;
+    move.angular.z = clockwise ? -turn_speed_ : turn_speed_;
+
+    // The axis we want to be rotating by
+    tf::Vector3 desired_turn_axis(0, 0, clockwise ? 1 : -1);
+
+    ros::Rate rate(100);
+    bool done = false;
     while (!done && nh_.ok())
     {
-        // Determining speed
-        if (0 <= t && t < T / 3)
-            move.angular.z = (3 * cruise_speed * t) / T;
-        else if (T / 3 <= t && t < 2 * T / 3)
-            move.angular.z = cruise_speed;
-        else if (2 * T / 3 <= t <= T)
-            move.angular.z = 3 * cruise_speed * (1 - t / T);
-
-        ROS_INFO("Speed: %f", move.angular.z);
+        // Send the drive command
         pub_cmd_vel_.publish(move);
-
-        // Increasing time counter
-        t += time_step;
-
-        // Pause
         rate.sleep();
 
-        // If total time is elapsed, finish driving
-        done = t > T;
+        // Get the current transform
+        try
+        {
+            listener_.lookupTransform("base_link", "odom",
+                ros::Time(0), current_transform);
+        }
+        catch (tf::TransformException ex)
+        {
+            ROS_ERROR("%s", ex.what());
+            break;
+        }
+
+        tf::Transform relative_transform =
+            start_transform.inverse() * current_transform;
+        tf::Vector3 actual_turn_axis =
+            relative_transform.getRotation().getAxis();
+
+        double angle_turned = relative_transform.getRotation().getAngle();
+
+        if (fabs(angle_turned) < 1.0e-2)
+            continue;
+
+        if (actual_turn_axis.dot(desired_turn_axis) < 0)
+            angle_turned = 2 * M_PI - angle_turned;
+
+        if (angle_turned > radians)
+            done = true;
     }
 
-    // To be sure that robot is stopped
-    move.linear.z = 0;
+    move.angular.z = 0;
     pub_cmd_vel_.publish(move);
 
-    return 0;
+    return done;
 }
 
 float RobotDriver::drive(float distance)
@@ -355,7 +372,7 @@ float RobotDriver::drive(float distance)
     // Drive settings
     float xf = distance * error_margin_;
 
-    float cruise_speed = std::max(std::min(xf / 2, max_drive_speed_), -max_drive_speed_);
+    float cruise_speed = std::min(xf / 2, max_speed_);
     float T = 1.5 * (xf / cruise_speed);
 
     float frequency = 100;
