@@ -199,29 +199,6 @@ Target get_target(sensor_msgs::LaserScanConstPtr scan)
     return target;
 }
 
-std::vector<float> get_correction(std::vector<Point> &points, int first_edge_index, int second_edge_index)
-{
-    std::vector<float> xValues;
-    std::vector<float> yValues;
-
-    for (auto p : points)
-    {
-        if (points[first_edge_index].angle < p.angle && p.angle < points[second_edge_index].angle)
-            continue;
-
-        // Polar to cartesian
-        float x = p.range * std::sin(M_PI - p.angle);
-        float y = p.range * std::cos(M_PI - p.angle);
-        xValues.push_back(x);
-        yValues.push_back(y);
-    }
-
-    std::vector<float> fit = polyfit_boost(xValues, yValues, 1);
-    fit[1] = std::atan(fit[1]);
-
-    return fit;
-}
-
 CorrectionReport RobotDriver::correct_angle()
 {
     // Init report

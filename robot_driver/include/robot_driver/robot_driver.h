@@ -14,7 +14,6 @@
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/LaserScan.h>
 #include <tf/transform_listener.h>
-#include "polyfit/PolyfitBoost.hpp"
 #include "robot_driver/GetCorrection.h"
 
 #define NO_SCAN_POINT 100
@@ -90,5 +89,3 @@ public:
 void sayHello();
 
 Target get_target(sensor_msgs::LaserScanConstPtr scan);
-
-std::vector<float> get_correction(std::vector<Point> &points, int first_edge_index, int second_edge_index);
