@@ -1,4 +1,0 @@
-robot_driver:
-    scan_range: 2.9
-    correction_threshold: 0.05
-    turn_speed: 0.5
