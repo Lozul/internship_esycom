@@ -85,18 +85,33 @@ bool RobotDriver::turn(bool clockwise, float radians)
     // We will be sending commands of type "twist"
     geometry_msgs::Twist move;
 
-    // The command will be to turn at turn_speed_ rad/s
-    float turn_speed = 0.005;
-    move.linear.x = move.linear.y = 0;
-    move.angular.z = clockwise ? -turn_speed : turn_speed;
+    // The speed will increase to cruise_speed halfway then decrese for smooth movement
+    float cruise_speed = radians / 2;
+    move.linear.x = move.linear.y = move.angular.z = 0;
 
     // The axis we want to be rotating by
     tf::Vector3 desired_turn_axis(0, 0, clockwise ? 1 : -1);
 
     ros::Rate rate(100);
     bool done = false;
+    double angle_turned = 0.0;
     while (!done && nh_.ok())
     {
+        // Determine speed
+        angle_turned = fabs(angle_turned);
+        move.angular.z = 1e-2; // Default speed for startup
+
+        // The "magic numbers" where found by experience
+        //  bellow 1e-2 we will apply the startup speed,
+        //  then we will increase until halfway through, then decrease
+        if (1e-2 < angle_turned && angle_turned < radians / 2)
+            move.angular.z = (1/0.495) * cruise_speed * (angle_turned / radians);
+        else if (radians / 2 <= angle_turned && angle_turned < radians)
+            move.angular.z = (1/0.495) * cruise_speed * (1 - angle_turned / radians);
+
+        move.angular.z *= clockwise ? -1 : 1;
+        ROS_INFO("Speed: %f", move.angular.z);
+
         // Send the drive command
         pub_cmd_vel_.publish(move);
         rate.sleep();
@@ -113,12 +128,13 @@ bool RobotDriver::turn(bool clockwise, float radians)
             break;
         }
 
+        // Compute turned angle
         tf::Transform relative_transform =
             start_transform.inverse() * current_transform;
         tf::Vector3 actual_turn_axis =
             relative_transform.getRotation().getAxis();
 
-        double angle_turned = relative_transform.getRotation().getAngle();
+        angle_turned = relative_transform.getRotation().getAngle();
 
         if (fabs(angle_turned) < 1.0e-2)
             continue;
@@ -126,9 +142,11 @@ bool RobotDriver::turn(bool clockwise, float radians)
         if (actual_turn_axis.dot(desired_turn_axis) < 0)
             angle_turned = 2 * M_PI - angle_turned;
 
-        if (angle_turned > radians)
+        if (angle_turned >= radians)
             done = true;
     }
+
+    ROS_INFO("Angle turned: %f", angle_turned);
 
     move.angular.z = 0;
     pub_cmd_vel_.publish(move);
