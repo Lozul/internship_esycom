@@ -1,4 +1,4 @@
-# Name - ROS packages for the ESYCOM laboratory
+# ROS packages for the ESYCOM laboratory
 
 > A set of packages developped for the ESYCOM laboratory to use the ROSBot 2.0 pro of [Husarion](https://husarion.com/)
 
