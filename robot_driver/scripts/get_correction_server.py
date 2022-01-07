@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+
+"""Module which computes the angle to correct.
+
+This module act as a server to which other module can do request
+to know the current angle to correct for the robot to be align with the target.
+"""
+
 from math import cos, sin, atan
 
 from robot_driver.srv import GetCorrection, GetCorrectionResponse
@@ -20,6 +27,10 @@ def export_scan(scan, filename="data.csv"):
 
 
 def hand_get_correction(req):
+    """Documentation for this function
+
+    Details
+    """
     resp = GetCorrectionResponse(False, 0)
 
     rospy.loginfo("Received a request for correction")

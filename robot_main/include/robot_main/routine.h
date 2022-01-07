@@ -1,13 +1,20 @@
+/**
+ * @file routine.h
+ * @author Louis Gasnault
+ */
+
 #pragma once
+
+/**
+ * @brief [brief description]
+ * @details [long description]
+ * 
+ */
 
 struct Routine
 {
-    int steps;
-    float step_distance;
-
-    void reconfigure(int steps_, float step_distance_)
-    {
-        steps = steps_;
-        step_distance = step_distance_;
-    }
+    int steps;              /**< [description] */
+    float step_distance;    /**< [description] */
+    float frequency;        /**< [description] */
+    float power_level;      /**< [description] */
 };

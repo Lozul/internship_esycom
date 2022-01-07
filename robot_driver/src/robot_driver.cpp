@@ -85,7 +85,7 @@ bool RobotDriver::turn(bool clockwise, float radians)
     // We will be sending commands of type "twist"
     geometry_msgs::Twist move;
 
-    // The speed will increase to cruise_speed halfway then decrese for smooth movement
+    // The speed will increase to cruise_speed halfway then decrease for smooth movement
     float cruise_speed = radians / 2;
     move.linear.x = move.linear.y = move.angular.z = 0;
 
