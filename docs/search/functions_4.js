@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['robotdriver_0',['RobotDriver',['../class_robot_driver.html#a826a39b195865c7c76791f06468211fc',1,'RobotDriver']]]
+  ['set_5fcorrection_5fthreshold_0',['set_correction_threshold',['../class_robot_driver.html#a333109df2e983b03f765a44aed5c6448',1,'RobotDriver']]]
 ];
