@@ -156,12 +156,19 @@ bool RobotDriver::turn(bool clockwise, float radians)
 
 float RobotDriver::drive(float distance)
 {
-    // Drive settings
+    // Note: currently using time to determine speed, should use
+    //  traveled distance as measured by the laser.
+
+    // Distance to travel, with error margin
     float xf = distance * error_margin_;
 
+    // Max speed to be reached
     float cruise_speed = std::min(xf / 2, max_speed_);
+
+    // Total travel time
     float T = 1.5 * (xf / cruise_speed);
 
+    // Loop frequency
     float frequency = 100;
     float time_step = 1.0 / frequency;
 
@@ -174,7 +181,7 @@ float RobotDriver::drive(float distance)
 
     while (!done && nh_.ok())
     {
-        // Determining speed
+        // Determining speed based on elapsed time 
         if (0 <= t && t < T / 3)
             move.linear.x = (3 * cruise_speed * t) / T;
         else if (T / 3 <= t && t < 2 * T / 3)

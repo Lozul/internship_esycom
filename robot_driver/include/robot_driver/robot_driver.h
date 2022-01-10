@@ -23,9 +23,6 @@
 
 /**
  * @brief Class containing handy methods to control the robot movements.
- * 
- * @note Explain error_margin_ and other wizardery
- * 
  */
 
 class RobotDriver
@@ -40,7 +37,7 @@ private:
     float correction_threshold_ = 0.005;    /**< Below this, the correction is not applied (in radians). */
 
     float max_speed_ = 1.0;                 /**< Max linear speed of the ROSbot 2.0 Pro, see Husarion manual. */
-    float error_margin_ = 1.01359;          /**< Factor to correct the error of RobotDriver::drive, see Note of RobotDriver class. */
+    float error_margin_ = 1.01359;          /**< Factor to correct the error of RobotDriver::drive. */
 
 public:
 
@@ -72,13 +69,19 @@ public:
      * @details Makes requests to the get_correction server and calls the RobotDriver::turn method with the received angle.
      *  Continue until the server sends an angle bellow the correction threshold.
      *  
+     * @note See \ref GetCorrectionExplained for details.
+     *  
      * @return True if the correction was successful.
      */
     bool correct_angle();
 
     /**
      * @brief Rotates the robot with a given angle in radians.
-     * @todo Explain the algorithm or link ressources
+     * @details Based on the tutorial for the ROS package `pr2_controllers`.
+     *  Records the transform at the start, then sends Twist messages with
+     *  an angular speed following a v-shaped function to ensure smooth movement.
+     *  
+     * @note For more details, see inline comments in `robot_driver.cpp`.
      * 
      * @param clockwise Indicates the rotation direction.
      * @param radians Angle to turn (in radians).
@@ -89,7 +92,10 @@ public:
 
     /**
      * @brief Makes the robot move in a linear way.
-     * @todo Explain the algorithm or link ressources
+     * @details Sets a maximum speed and determine total time to travel the given distance.
+     *  Sends Twist messages with a linear speed following a trapezoidal function to ensure smooth movement.
+     *  
+     * @note For more details, see inline comments in `robot_driver.cpp`.
      * 
      * @param distance Distance to be traveled (in meter), can be negative.
      * @return 0 (real traveled distance not implemented yet)
