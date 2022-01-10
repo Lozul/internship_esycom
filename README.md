@@ -14,7 +14,7 @@ The project is composed of 3 packages:
 The main objective is to precisely control the robot to perform measurements semi-automatically to study wireless systems operating close to the ground.
 
 Documentation can be found here:
-- RobotDriver for driving methods
+- RobotDriver for driving methods and Routine for settings
 - \subpage GetCorrectionExplained for correction calculations
 
 ## Usage

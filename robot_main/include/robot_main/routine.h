@@ -6,15 +6,13 @@
 #pragma once
 
 /**
- * @brief [brief description]
- * @details [long description]
- * 
+ * @brief Describe a routine to be executed by the robot
  */
 
 struct Routine
 {
-    int steps;              /**< [description] */
-    float step_distance;    /**< [description] */
-    float frequency;        /**< [description] */
-    float power_level;      /**< [description] */
+    int steps;              /**< Number of steps */
+    float step_distance;    /**< Distance between each step */
+    float frequency;        /**< Frequency of the generator */
+    float power_level;      /**< Power level of the generator */
 };
