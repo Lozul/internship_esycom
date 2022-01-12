@@ -95,22 +95,22 @@ bool RobotDriver::turn(bool clockwise, float radians)
     ros::Rate rate(100);
     bool done = false;
     double angle_turned = 0.0;
-    while (!done && nh_.ok())
+    while (angle_turned < radians && !done && nh_.ok())
     {
         // Determine speed
         angle_turned = fabs(angle_turned);
-        move.angular.z = 1e-2; // Default speed for startup
+        move.angular.z = 2 * cruise_speed * (1e-2 / radians); // Default speed for startup
 
         // The "magic numbers" where found by experience
         //  bellow 1e-2 we will apply the startup speed,
         //  then we will increase until halfway through, then decrease
         if (1e-2 < angle_turned && angle_turned < radians / 2)
-            move.angular.z = (1/0.495) * cruise_speed * (angle_turned / radians);
+            move.angular.z = 2 * cruise_speed * (angle_turned / radians);
         else if (radians / 2 <= angle_turned && angle_turned < radians)
-            move.angular.z = (1/0.495) * cruise_speed * (1 - angle_turned / radians);
+            move.angular.z = 2 * cruise_speed * (1 - angle_turned / radians);
 
         move.angular.z *= clockwise ? -1 : 1;
-        ROS_INFO("Speed: %f", move.angular.z);
+        ROS_INFO("Speed: %f | Angle: %f/%f", move.angular.z, angle_turned, radians);
 
         // Send the drive command
         pub_cmd_vel_.publish(move);
