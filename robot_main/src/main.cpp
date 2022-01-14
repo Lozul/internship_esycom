@@ -113,7 +113,7 @@ int main(int argc, char **argv)
         {
             ROS_INFO("RobotMain: === Routine step %i ===", current_step + 1);
 
-            rd.correct_angle();
+            float current_angle = rd.correct_angle();
 
             if (use_generator)
             {
@@ -136,7 +136,9 @@ int main(int argc, char **argv)
                 ROS_DEBUG("RobotMain: routine step %i, driving to next stop", current_step + 1);
             }
 
-            rd.drive(routine.step_distance);
+            Distance dist = rd.drive(routine.step_distance);
+
+            // TODO: log current_angle and dist in a .csv file per routine
 
             ROS_INFO("RobotMain: step %i done", current_step + 1);
 

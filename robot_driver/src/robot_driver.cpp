@@ -29,9 +29,6 @@ RobotDriver::RobotDriver(ros::NodeHandle nh)
 
 bool RobotDriver::correct_angle()
 {
-    // Init report
-    bool success = false;
-
     float correction = 1;
     float total_correction = 0;
 
@@ -45,12 +42,12 @@ bool RobotDriver::correct_angle()
         if (!ros::service::call("get_correction", srv))
         {
             ROS_ERROR("Failed to call service get_correction");
-            return success;
+            return 0;
         }
         else if (!srv.response.success)
         {
             ROS_ERROR("get_correction service failed");
-            return success;
+            return 0;
         }
 
         correction = srv.response.angle;
@@ -64,8 +61,7 @@ bool RobotDriver::correct_angle()
 
     ROS_INFO("RobotDriver: correction made or no correction to be made (%.3f rad)", total_correction);
 
-    success = true;
-    return success;
+    return correction;
 }
 
 bool RobotDriver::turn(bool clockwise, float radians)
@@ -110,7 +106,6 @@ bool RobotDriver::turn(bool clockwise, float radians)
             move.angular.z = 2 * cruise_speed * (1 - angle_turned / radians);
 
         move.angular.z *= clockwise ? -1 : 1;
-        ROS_INFO("Speed: %f | Angle: %f/%f", move.angular.z, angle_turned, radians);
 
         // Send the drive command
         pub_cmd_vel_.publish(move);
@@ -154,8 +149,11 @@ bool RobotDriver::turn(bool clockwise, float radians)
     return done;
 }
 
-float RobotDriver::drive(float distance)
+Distance RobotDriver::drive(float distance)
 {
+    // Record starting position
+    Distance start = getTargetDistance();
+
     // Drive settings
     float xf = distance * error_margin_;
 
@@ -198,8 +196,40 @@ float RobotDriver::drive(float distance)
     move.linear.x = 0;
     pub_cmd_vel_.publish(move);
 
-    // TODO: return traveled distance (using laser?)
-    return 0;
+    // Record final position
+    Distance res = getTargetDistance();
+
+    // Return traveled distance
+    res.encoders -= start.encoders;
+    res.laser -= start.laser;
+
+    return res;
+}
+
+Distance getTargetDistance()
+{
+    Distance res;
+
+    auto msg = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("/pose");
+    res.encoders = msg.pose.point.x;
+
+    while (true)
+    {
+        auto msg = ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
+        int len = sizeof(msg.ranges) / sizeof(msg.ranges[0]);
+
+        float a = msg.ranges[0];
+        float b = msg.ranges[len - 1];
+
+        if ((a < msg.range_min || a > msg.range_max)
+                || (b < msg.range_min || b > msg.range_max))
+            continue;
+
+        res.laser = (a + b) / 2;
+        break;
+    }
+
+    return res;
 }
 
 void sayHello()

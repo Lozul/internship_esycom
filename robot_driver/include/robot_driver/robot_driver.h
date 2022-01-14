@@ -18,8 +18,15 @@
 #include <std_msgs/UInt8.h>
 #include <geometry_msgs/Twist.h>
 #include <sensor_msgs/LaserScan.h>
+#include <geometry_msgs/PoseStamped.h>
 #include <tf/transform_listener.h>
 #include "robot_driver/GetCorrection.h"
+
+struct Distance
+{
+    float laser = 0;
+    float encoders = 0;
+}
 
 /**
  * @brief Class containing handy methods to control the robot movements.
@@ -72,7 +79,7 @@ public:
      * @details Makes requests to the get_correction server and calls the RobotDriver::turn method with the received angle.
      *  Continue until the server sends an angle bellow the correction threshold.
      *  
-     * @return True if the correction was successful.
+     * @return Final angle after correction.
      */
     bool correct_angle();
 
@@ -92,9 +99,9 @@ public:
      * @todo Explain the algorithm or link ressources
      * 
      * @param distance Distance to be traveled (in meter), can be negative.
-     * @return 0 (real traveled distance not implemented yet)
+     * @return Traveled distance, measured by encoders and laser
      */
-    float drive(float distance);
+    Distance drive(float distance);
 };
 
 void sayHello();
