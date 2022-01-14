@@ -11,6 +11,8 @@ class CustomHandler(socketserver.StreamRequestHandler):
     def __init__(self, request, client_address, server):
         super().__init__(request, client_address, server)
 
+        self.commands = dict()
+
     def setup(self):
         super().setup()
         print(f">>> {self.client_address[0]}")
@@ -20,15 +22,23 @@ class CustomHandler(socketserver.StreamRequestHandler):
             while True:
                 data = self.rfile.readline()
                 if not data: break
-                print(f"Received: {data}")
-                self.wfile.write(b"pong\n")
-                self.wfile.flush()
+                data = data.decode('utf-8')
+
+                if "ping" in data:
+                    self.cmd_ping()
         except (ConnectionResetError, EOFError):
             pass
+        except KeyboardInterrupt:
+            return
 
     def finish(self):
         print(f"<<< {self.client_address[0]}")
         super().finish()
+
+    # - Server commands - #
+    def cmd_ping(self):
+        self.wfile.write(b"pong\n")
+        self.wfile.flush()
 
 
 def main():
