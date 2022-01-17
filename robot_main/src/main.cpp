@@ -1,5 +1,7 @@
 #include <unistd.h>
 #include <string>
+#include <fstream>
+#include <experimental/filesystem>
 #include <ros/ros.h>
 #include <std_msgs/Bool.h>
 #include <dynamic_reconfigure/server.h>
@@ -7,6 +9,8 @@
 #include "robot_driver/robot_driver.h"
 #include "robot_main/Routine.h"
 #include "LMShid.h"
+
+namespace fs = std::experimental::filesystem;
 
 robot_main::Routine routine;
 bool execute_routine = false;
@@ -72,9 +76,9 @@ int main(int argc, char **argv)
     f = boost::bind(&reconfigure, _1, _2, boost::ref(rd));
     server.setCallback(f);
 
-    std::string report_folder = "/home/husarion/ros_workspace/reports/";
-    std::string after_correction_suffix = "_after";
-    std::string extension = ".csv";
+    // Report
+    std::ofstream report_file("/home/husarion/robot_reports/report.csv", std::ofstream::trunc); 
+    report_file << "angle,laser,encoders" << std::endl;
 
     // LMS device
     DEVID generator_id;
@@ -138,7 +142,7 @@ int main(int argc, char **argv)
 
             Distance dist = rd.drive(routine.step_distance);
 
-            // TODO: log current_angle and dist in a .csv file per routine
+            report_file << current_angle << "," << dist.laser << "," << dist.encoders << std::endl;
 
             ROS_INFO("RobotMain: step %i done", current_step + 1);
 
@@ -150,10 +154,13 @@ int main(int argc, char **argv)
 
             sleep(1);
         }
-        else if (current_step == routine.nb_steps)
+        else if (execute_routine && current_step == routine.nb_steps)
         {
             execute_routine = false;
             current_step = 0;
+
+            report_file.close();
+
         }
         else if (!execute_routine && current_step != 0)
         {

@@ -26,7 +26,9 @@ struct Distance
 {
     float laser = 0;
     float encoders = 0;
-}
+};
+
+Distance getTargetDistance();
 
 /**
  * @brief Class containing handy methods to control the robot movements.
@@ -81,7 +83,7 @@ public:
      *  
      * @return Final angle after correction.
      */
-    bool correct_angle();
+    float correct_angle();
 
     /**
      * @brief Rotates the robot with a given angle in radians.

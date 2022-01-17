@@ -27,7 +27,7 @@ RobotDriver::RobotDriver(ros::NodeHandle nh)
     }
 }
 
-bool RobotDriver::correct_angle()
+float RobotDriver::correct_angle()
 {
     float correction = 1;
     float total_correction = 0;
@@ -51,6 +51,7 @@ bool RobotDriver::correct_angle()
         }
 
         correction = srv.response.angle;
+        ROS_INFO("%f", correction);
 
         if (std::abs(correction) >= correction_threshold_)
         {
@@ -201,7 +202,7 @@ Distance RobotDriver::drive(float distance)
 
     // Return traveled distance
     res.encoders -= start.encoders;
-    res.laser -= start.laser;
+    res.laser = start.laser - res.laser;
 
     return res;
 }
@@ -211,18 +212,18 @@ Distance getTargetDistance()
     Distance res;
 
     auto msg = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("/pose");
-    res.encoders = msg.pose.point.x;
+    res.encoders = msg->pose.position.x;
 
     while (true)
     {
         auto msg = ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
-        int len = sizeof(msg.ranges) / sizeof(msg.ranges[0]);
+        int len = sizeof(msg->ranges) / sizeof(msg->ranges[0]);
 
-        float a = msg.ranges[0];
-        float b = msg.ranges[len - 1];
+        float a = msg->ranges[0];
+        float b = msg->ranges[len - 1];
 
-        if ((a < msg.range_min || a > msg.range_max)
-                || (b < msg.range_min || b > msg.range_max))
+        if ((a < msg->range_min || a > msg->range_max)
+                || (b < msg->range_min || b > msg->range_max))
             continue;
 
         res.laser = (a + b) / 2;
