@@ -46,7 +46,7 @@ target_link_libraries(${PROJECT_NAME}_node
   usb
 )
 
-add_executable(${PROJECT_NAME}_test_node src/test.cpp)
-target_link_libraries(${PROJECT_NAME}_test_node
-    ${catkin_LIBRARIES}
-)
+# add_executable(${PROJECT_NAME}_test_node src/test.cpp)
+# target_link_libraries(${PROJECT_NAME}_test_node
+#     ${catkin_LIBRARIES}
+# )
