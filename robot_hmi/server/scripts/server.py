@@ -1,62 +1,64 @@
 #! /usr/bin/env python
-import threading
+import socket
+import pickle
 
 import rospy
-import numpy as np
 
 from robot_main.msg import Routine
 from std_msgs.msg import Bool, UInt8
 
-r = Routine(1, 0.2, 5.0, 9.0)
-pending = False
 
-def sub_progress(msg):
-    global pending
+def pub_routine(routine):
+    set_routine = rospy.Publisher('set_routine', Routine, queue_size=1)
+    start_routine = rospy.Publisher('start_routine', Bool, queue_size=1)
 
-    if pending and msg.data == r.nb_steps:
-        print '\rRoutine is finished'
+    while set_routine.get_num_connections() < 1 or start_routine.get_num_connections() < 1:
+        continue
 
-        with open("/home/husarion/robot_reports/report.csv", mode='r') as f:
-            data = np.genfromtxt(f, delimiter=',', names=True)
-            print_data(data)
+    print(set_routine.get_num_connections(), start_routine.get_num_connections())
 
-        pending = False
-
-
-def print_data(data):
-    for name in data.dtype.names:
-        print name.rjust(10),
-
-    print ""
-
-    for step in data:
-        for d in step:
-            print str(d).rjust(10),
-        print ""
-
-    print "---"
-
+    set_routine.publish(routine)
+    start_routine.publish(True)
 
 def main():
-    global pending
+    HOST, PORT = "0.0.0.0", 9999
 
     rospy.init_node("server", anonymous=True)
 
-    set_routine = rospy.Publisher('set_routine', Routine, queue_size=1)
-    start_routine = rospy.Publisher('start_routine', Bool, queue_size=1)
-    rospy.Subscriber('routine_progress', UInt8, sub_progress)
+    server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    server.bind((HOST, PORT))
+    server.listen(1)
 
-    while not rospy.is_shutdown():
-        user = raw_input(">>> ")
-        if user == "send":
-            if not pending:
-                set_routine.publish(r)
-                start_routine.publish(True)
-                pending = True
-            else:
-                print("Last routine is not finished")
-        elif user == "quit":
-            break
+    print 'Server is on'
+
+    conn, addr = server.accept()
+    print 'Connected by', addr
+
+    while 1:
+        data = conn.recv(1024)
+        if not data: break
+
+        r = pickle.loads(data)
+        routine = Routine(r["nb_steps"], r["step_distance"], r["frequency"], r["power_level"])
+
+        print 'Received routine:'
+        print routine
+
+        pub_routine(routine)
+
+        print 'Waiting for routine to end...'
+        while rospy.wait_for_message('routine_progress', UInt8).data != routine.nb_steps:
+            continue
+
+        report = ""
+        with open("/home/husarion/robot_reports/report.csv", mode='r') as f:
+            report = f.read()
+
+        print 'Sending report:'
+        print report
+
+        conn.sendall(report)
+        print 'Report sended!'
 
 if __name__ == "__main__":
     main()

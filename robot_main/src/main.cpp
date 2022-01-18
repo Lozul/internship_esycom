@@ -32,6 +32,9 @@ void set_routine_callback(const robot_main::RoutineConstPtr &msg)
 
 void start_routine_callback(const std_msgs::Bool &msg)
 {
+    if (msg.data)
+        ROS_INFO("Starting routine");
+
     execute_routine = msg.data;
 }
 
