@@ -1,26 +1,22 @@
 #! /usr/bin/env python3
-#import socket
-#import pickle
-#
-#HOST, PORT = '10.42.0.23', 9999
-#routine = {"nb_steps": 1, "step_distance": 0.2, "frequency": 5, "power_level": 9}
-#data = pickle.dumps(routine, protocol=0)
-#
-#s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#s.connect((HOST, PORT))
-#s.sendall(data)
-#data = s.recv(2048)
-#s.close()
-#
-#print('Received', repr(data))
+import pickle
+import socket
+import re
 
 from tkinter import *
 from tkinter import ttk
+from tkinter import messagebox
 
 
-class GUI(ttk.Frame):
-    def __init__(self, root):
+PORT = 9999
+
+
+class App(ttk.Frame):
+    def __init__(self, root, ipVar, sock):
         ttk.Frame.__init__(self, root)
+
+        self.ipVar = ipVar
+        self.socket = sock
 
         self.nb_steps = IntVar(value=10)
         self.step_distance = DoubleVar(value=0.2)
@@ -75,7 +71,7 @@ class GUI(ttk.Frame):
         mode_repeat_b.state(['disabled'])
 
         # Button for start
-        start_b = ttk.Button(self, text='Start')
+        start_b = ttk.Button(self, text='Start', command=self.send_routine)
 
         # Grid
         drive_frame.grid(column=0, row=0,sticky=(W, E))
@@ -106,12 +102,88 @@ class GUI(ttk.Frame):
         for child in self.winfo_children():
             child.grid(padx=5, pady=5)
 
+    def send_routine(self):
+        routine = {
+            "nb_steps": self.nb_steps.get(),
+            "step_distance": self.step_distance.get(),
+            "frequency": self.freq_start.get(),
+            "power_level": self.power_level.get()
+        }
+
+        data = pickle.dumps(routine, protocol=0)
+
+        self.socket.sendall(data)
+
+
+class AskIP(Toplevel):
+    def __init__(self, parent, ipVar, sock):
+        Toplevel.__init__(self, parent)
+        self.title("Robot IP")
+
+        self.ipVar = ipVar
+        self.socket = sock
+
+        self.create_widgets()
+
+        self.protocol("WM_DELETE_WINDOW", self.quit)
+        self.transient(parent)
+        self.grab_set()
+        self.wait_window()
+
+    def create_widgets(self):
+        ttk.Label(self, text="Enter Robot IP:").grid()
+
+        vcmd = (self.register(self.valid_entry), "%S")
+        ttk.Entry(self, textvariable=self.ipVar, validate="key", validatecommand=vcmd).grid()
+
+        ttk.Button(self, text='OK', command=self.valid_ip).grid()
+
+        for child in self.winfo_children():
+            child.grid(padx=5, pady=5)
+
+    def valid_entry(self, S):
+        return re.match("[.0-9]", S) is not None
+
+    def valid_ip(self):
+        ip = self.ipVar.get()
+        v = re.fullmatch("(\A25[0-5]|\A2[0-4][0-9]|\A[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}", ip)
+
+        if v is not None and self.connect_to_ip():
+            self.dismiss()
+        else:
+            messagebox.showerror(message="Please enter a valid IP address", title="Invalid IP")
+
+    def connect_to_ip(self):
+        ip = self.ipVar.get()
+        try:
+            self.socket.connect((ip, PORT))
+        except (TimeoutError, ConnectionRefusedError):
+            print(f"Can't connect to {ip} on port {PORT}")
+            return False
+
+        return True
+
+
+    def dismiss(self):
+        self.grab_release()
+        self.destroy()
+
+    def quit(self):
+        self.dismiss()
+        quit()
+
 
 def main():
     root = Tk()
     root.title("Robot GUI")
 
-    GUI(root)
+    ipVar = StringVar(value="0.0.0.0")
+
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.settimeout(2)
+
+    App(root, ipVar, sock)
+    AskIP(root, ipVar, sock)
     
     root.mainloop()
 
