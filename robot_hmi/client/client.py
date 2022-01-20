@@ -2,11 +2,13 @@
 import threading
 import pickle
 import socket
+import time
 import re
 
 from tkinter import *
 from tkinter import ttk
 from tkinter import messagebox
+from tkinter import filedialog
 
 
 PORT = 9999
@@ -135,9 +137,20 @@ class App(ttk.Frame):
         threading.Thread(None, self.get_report).start()
 
     def get_report(self):
+        # TODO: loop to be sure we received all data
         report = self.socket.recv(2048)
+        report = report.decode("utf-8")
 
-        print(f"Received report:\n{report.decode('utf-8')}")
+        print(f"Received report")
+
+        filename = filedialog.asksaveasfilename(defaultextension=".csv",
+                filetypes=[("CSV", "*.csv"), ("All files", "*")])
+
+        if not filename:
+            filename = "last_unsaved_report.csv"
+
+        with open(filename, mode="w") as f:
+            f.write(report)
 
         self.lock.release()
         self.progress.stop()
