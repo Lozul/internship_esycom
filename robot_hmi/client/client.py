@@ -1,4 +1,5 @@
 #! /usr/bin/env python3
+import threading
 import pickle
 import socket
 import re
@@ -17,6 +18,8 @@ class App(ttk.Frame):
 
         self.ipVar = ipVar
         self.socket = sock
+
+        self.lock = threading.Lock()
 
         self.nb_steps = IntVar(value=10)
         self.step_distance = DoubleVar(value=0.2)
@@ -72,6 +75,10 @@ class App(ttk.Frame):
         # Button for start
         start_b = ttk.Button(self, text='Start', command=self.send_routine)
 
+        # Indeterminate progressbar
+        self.progress = ttk.Progressbar(self, orient=HORIZONTAL,
+                length=100, mode='indeterminate')
+
         # Grid
         drive_frame.grid(column=0, row=0,sticky=(W, E))
         source_frame.grid(column=0, row=1)
@@ -98,11 +105,18 @@ class App(ttk.Frame):
 
         start_b.grid(column=0, row=2)
 
+        self.progress.grid(column=0, row=3)
+
         for child in self.winfo_children():
             child.grid(padx=5, pady=5)
 
     def send_routine(self):
         # TODO: adapt entry value to what the API of the generator wants
+        if not self.lock.acquire(blocking=False):
+            messagebox.showinfo(message="A routine is in progress")
+            return
+
+        self.progress.start(5)
 
         routine = {
             "nb_steps": self.nb_steps.get(),
@@ -117,6 +131,16 @@ class App(ttk.Frame):
         data = pickle.dumps(routine, protocol=0)
 
         self.socket.sendall(data)
+
+        threading.Thread(None, self.get_report).start()
+
+    def get_report(self):
+        report = self.socket.recv(2048)
+
+        print(f"Received report:\n{report.decode('utf-8')}")
+
+        self.lock.release()
+        self.progress.stop()
 
 
 class AskIP(Toplevel):
@@ -184,7 +208,6 @@ def main():
     ipVar = StringVar(value="0.0.0.0")
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.settimeout(2)
 
     App(root, ipVar, sock)
     AskIP(root, ipVar, sock)
