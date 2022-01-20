@@ -26,8 +26,11 @@ void set_routine_callback(const robot_main::RoutineConstPtr &msg)
     
     routine.nb_steps = msg->nb_steps;
     routine.step_distance = msg->step_distance;
-    routine.frequency = msg->frequency;
+    routine.freq_start = msg->freq_start;
+    routine.freq_end = msg->freq_end;
     routine.power_level = msg->power_level;
+    routine.time = msg->time;
+    routine.repeat = msg->repeat;
 }
 
 void start_routine_callback(const std_msgs::Bool &msg)
@@ -124,23 +127,23 @@ int main(int argc, char **argv)
 
             if (use_generator)
             {
-                ROS_INFO("RobotMain: routine step %i, emit frequency %i", current_step + 1, routine.frequency);
-
-                status = fnLMS_SetPowerLevel(generator_id, routine.power_level);
-                ROS_INFO("RobotMain: SetPowerLevel: %s", fnLMS_perror(status));
-
-                status = fnLMS_SetFrequency(generator_id, routine.frequency);
-                ROS_INFO("RobotMain: SetFrequency: %s", fnLMS_perror(status));
-
-                status = fnLMS_SetRFOn(generator_id, true);
-                ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
-
-                sleep(2);
-
-                status = fnLMS_SetRFOn(generator_id, false);
-                ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
-
-                ROS_DEBUG("RobotMain: routine step %i, driving to next stop", current_step + 1);
+//                ROS_INFO("RobotMain: routine step %i, emit frequency %i", current_step + 1, routine.frequency);
+//
+//                status = fnLMS_SetPowerLevel(generator_id, routine.power_level);
+//                ROS_INFO("RobotMain: SetPowerLevel: %s", fnLMS_perror(status));
+//
+//                status = fnLMS_SetFrequency(generator_id, routine.frequency);
+//                ROS_INFO("RobotMain: SetFrequency: %s", fnLMS_perror(status));
+//
+//                status = fnLMS_SetRFOn(generator_id, true);
+//                ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
+//
+//                sleep(2);
+//
+//                status = fnLMS_SetRFOn(generator_id, false);
+//                ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
+//
+//                ROS_DEBUG("RobotMain: routine step %i, driving to next stop", current_step + 1);
             }
 
             Distance dist = rd.drive(routine.step_distance);

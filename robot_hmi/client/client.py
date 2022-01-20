@@ -68,7 +68,6 @@ class App(ttk.Frame):
                 variable=self.repeat, value=False)
         mode_repeat_b = ttk.Radiobutton(mode_frame, text='Repeat',
                 variable=self.repeat, value=True)
-        mode_repeat_b.state(['disabled'])
 
         # Button for start
         start_b = ttk.Button(self, text='Start', command=self.send_routine)
@@ -103,11 +102,16 @@ class App(ttk.Frame):
             child.grid(padx=5, pady=5)
 
     def send_routine(self):
+        # TODO: adapt entry value to what the API of the generator wants
+
         routine = {
             "nb_steps": self.nb_steps.get(),
             "step_distance": self.step_distance.get(),
-            "frequency": self.freq_start.get(),
-            "power_level": self.power_level.get()
+            "freq_start": self.freq_start.get(),
+            "freq_end": self.freq_start.get(),
+            "power_level": self.power_level.get(),
+            "time": self.time.get(),
+            "repeat": self.repeat.get()
         }
 
         data = pickle.dumps(routine, protocol=0)
