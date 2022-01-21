@@ -12,5 +12,6 @@
 
     <node pkg="robot_main" type="robot_main_node" name="robot_main_node" output="screen" required="true"/>
     <node pkg="robot_driver" type="get_correction_server.py" name="get_correction_server" output="screen" required="true" />
+    <node pkg="server" type="server.py" name="server" output="screen" required="true"/>
     <!-- <node pkg="robot_gui" type="start" name="robot_gui" output="screen" required="true"/> -->
 </launch>

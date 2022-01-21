@@ -4,4 +4,4 @@ uint32 freq_start
 uint32 freq_end
 int32 power_level
 uint32 time
-bool repeat
+bool sweep

@@ -60,12 +60,6 @@ int main(int argc, char **argv)
     // RobotDriver init
     RobotDriver rd(nh);
 
-    // Routine init
-    routine.nb_steps = 0;
-    routine.step_distance = 0.0;
-    routine.frequency = 0;
-    routine.power_level = 0;
-
     // Subscribers
     // ros::Subscriber sub_buttons = nh.subscribe("/buttons", 1, &RobotDriver::button_input, &rd);
     ros::Subscriber sub_buttons = nh.subscribe("/buttons", 1, &button_callback);
