@@ -1,4 +1,5 @@
 #! /usr/bin/env python3
+from math import floor
 import threading
 import pickle
 import socket
@@ -27,10 +28,10 @@ class App(ttk.Frame):
         self.step_distance = DoubleVar(value=0.2)
 
         self.freq_start = DoubleVar(value=6.0)
-        self.freq_end = DoubleVar(value=12.0)
-        self.power_level = IntVar(value=9)
-        self.time = IntVar(value=200)
-        self.repeat = BooleanVar(value=False)
+        self.freq_end = DoubleVar(value=18.0)
+        self.power_level = IntVar(value=5)
+        self.time = IntVar(value=500)
+        self.sweep = BooleanVar(value=False)
 
         self.create_widgets()
 
@@ -69,10 +70,10 @@ class App(ttk.Frame):
             entries[i] = ttk.Entry(entries[i][1], textvariable=entries[i][0])
 
         # Buttons for mode
-        mode_one_b = ttk.Radiobutton(mode_frame, text='One time',
-                variable=self.repeat, value=False)
-        mode_repeat_b = ttk.Radiobutton(mode_frame, text='Repeat',
-                variable=self.repeat, value=True)
+        mode_no_b = ttk.Radiobutton(mode_frame, text='No sweep',
+                variable=self.sweep, value=False)
+        mode_sweep_b = ttk.Radiobutton(mode_frame, text='Sweep',
+                variable=self.sweep, value=True)
 
         # Button for start
         start_b = ttk.Button(self, text='Start', command=self.send_routine)
@@ -102,8 +103,8 @@ class App(ttk.Frame):
         entries[4].grid(column=0, row=3)
         entries[5].grid(column=1, row=3)
 
-        mode_one_b.grid(column=0, row=0, sticky=W)
-        mode_repeat_b.grid(column=0, row=1, sticky=W)
+        mode_no_b.grid(column=0, row=0, sticky=W)
+        mode_sweep_b.grid(column=0, row=1, sticky=W)
 
         start_b.grid(column=0, row=2)
 
@@ -123,11 +124,11 @@ class App(ttk.Frame):
         routine = {
             "nb_steps": self.nb_steps.get(),
             "step_distance": self.step_distance.get(),
-            "freq_start": self.freq_start.get(),
-            "freq_end": self.freq_start.get(),
-            "power_level": self.power_level.get(),
+            "freq_start": int(floor(self.freq_start.get() * 1e8)),
+            "freq_end": int(floor(self.freq_end.get() * 1e8)),
+            "power_level": int(floor(self.power_level.get() * 4)),
             "time": self.time.get(),
-            "repeat": self.repeat.get()
+            "sweep": self.sweep.get()
         }
 
         data = pickle.dumps(routine, protocol=0)
