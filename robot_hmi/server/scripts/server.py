@@ -79,7 +79,7 @@ def main():
     server.listen(1)
 
     # Init ROS node
-    use_routine = True
+    use_routine = False
     rospy.init_node("server", anonymous=True)
 
     # Init signal generator
@@ -135,7 +135,7 @@ def main():
             pub_routine(routine)
 
             print ':: Waiting for routine to end...'
-            while rospy.wait_for_message('routine_progress', UInt8).data != routine.nb_steps:
+            while rospy.wait_for_message('routine_progress', UInt8).data != routine.nb_steps and routine.nb_steps != 0:
                 continue
 
         report = ""

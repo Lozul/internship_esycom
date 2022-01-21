@@ -8,7 +8,6 @@
 #include <robot_main/GlobalConfig.h>
 #include "robot_driver/robot_driver.h"
 #include "robot_main/Routine.h"
-#include "LMShid.h"
 
 namespace fs = std::experimental::filesystem;
 
@@ -30,7 +29,7 @@ void set_routine_callback(const robot_main::RoutineConstPtr &msg)
     routine.freq_end = msg->freq_end;
     routine.power_level = msg->power_level;
     routine.time = msg->time;
-    routine.repeat = msg->repeat;
+    routine.sweep = msg->sweep;
 }
 
 void start_routine_callback(const std_msgs::Bool &msg)
@@ -48,9 +47,6 @@ void button_callback(const std_msgs::UInt8 &msg)
 
 int main(int argc, char **argv)
 {
-    fnLMS_Init();
-    fnLMS_SetTestMode(false);
-
     // ROS init
     ros::init(argc, argv, "robot_main_node");
     ros::NodeHandle nh("~");
@@ -80,32 +76,6 @@ int main(int argc, char **argv)
     std::ofstream report_file("/home/husarion/robot_reports/report.csv", std::ofstream::trunc); 
     report_file << "angle,laser,encoders" << std::endl;
 
-    // LMS device
-    DEVID generator_id;
-    int status = 0;
-
-    int nb_plugged = fnLMS_GetNumDevices();
-    bool use_generator = nb_plugged == 1;
-
-    if (nb_plugged == 0)
-        ROS_WARN("RobotMain: no Vaunix LMS devices located.");
-
-    if (use_generator)
-    {
-        DEVID active_devices[MAXDEVICES];
-
-        fnLMS_GetDevInfo(active_devices);
-        generator_id = active_devices[0];
-
-        status = fnLMS_InitDevice(generator_id);
-        ROS_INFO("RobotMain: generator status: %s", fnLMS_perror(status));
-
-        sleep(1);
-
-        status = fnLMS_SetRFOn(generator_id, false);
-        ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
-    }
-
     // Main loop
     int current_step = 0;
     while (nh.ok())
@@ -118,27 +88,6 @@ int main(int argc, char **argv)
             ROS_INFO("RobotMain: === Routine step %i ===", current_step + 1);
 
             float current_angle = rd.correct_angle();
-
-            if (use_generator)
-            {
-//                ROS_INFO("RobotMain: routine step %i, emit frequency %i", current_step + 1, routine.frequency);
-//
-//                status = fnLMS_SetPowerLevel(generator_id, routine.power_level);
-//                ROS_INFO("RobotMain: SetPowerLevel: %s", fnLMS_perror(status));
-//
-//                status = fnLMS_SetFrequency(generator_id, routine.frequency);
-//                ROS_INFO("RobotMain: SetFrequency: %s", fnLMS_perror(status));
-//
-//                status = fnLMS_SetRFOn(generator_id, true);
-//                ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
-//
-//                sleep(2);
-//
-//                status = fnLMS_SetRFOn(generator_id, false);
-//                ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
-//
-//                ROS_DEBUG("RobotMain: routine step %i, driving to next stop", current_step + 1);
-            }
 
             Distance dist = rd.drive(routine.step_distance);
 
@@ -167,12 +116,6 @@ int main(int argc, char **argv)
             // In case of stop from GUI, TODO: be able choose between "pause" or "stop" the routine
             current_step = 0;
         }
-    }
-    
-    if (use_generator)
-    {
-        status = fnLMS_CloseDevice(generator_id);
-        ROS_DEBUG("RobotMain: generator status: %s", fnLMS_perror(status));
     }
 
     return 0;
