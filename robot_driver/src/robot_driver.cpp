@@ -137,8 +137,7 @@ bool RobotDriver::turn(bool clockwise, float radians)
         if (actual_turn_axis.dot(desired_turn_axis) < 0)
             angle_turned = 2 * M_PI - angle_turned;
 
-        if (angle_turned >= radians)
-            done = true;
+        done = angle_turned >= radians;
     }
 
     ROS_INFO("Angle turned: %f", angle_turned);
@@ -155,15 +154,13 @@ Distance RobotDriver::drive(float distance)
     Distance start = getTargetDistance();
 
     // Drive settings
-    float xf = distance * error_margin_;
+    float x = 0;
+    float xf = distance;
 
     float cruise_speed = std::min(xf / 2, max_speed_);
-    float T = 1.5 * (xf / cruise_speed);
 
     float frequency = 100;
-    float time_step = 1.0 / frequency;
 
-    float t = 0;
     bool done = false;
 
     // ROS
@@ -173,23 +170,23 @@ Distance RobotDriver::drive(float distance)
     while (!done && nh_.ok())
     {
         // Determining speed
-        if (0 <= t && t < T / 3)
-            move.linear.x = (3 * cruise_speed * t) / T;
-        else if (T / 3 <= t && t < 2 * T / 3)
-            move.linear.x = cruise_speed;
-        else if (2 * T / 3 <= t <= T)
-            move.linear.x = 3 * cruise_speed * (1 - t / T);
+        move.linear.x = 2 * cruise_speed * (1e-3 / xf); // Startup speed
+
+        if (1e-3 <= x && x < xf / 2)
+            move.linear.x = 2 * cruise_speed * (x / xf);
+        else if (xf / 2 <= x && x <= xf)
+            move.linear.x = 2 * cruise_speed * (1 - x / xf);
 
         pub_cmd_vel_.publish(move);
 
-        // Increasing time counter
-        t += time_step;
+        // Get current traveled distance
+        x = start.laser - getTargetDistance().laser;
 
         // Pause
         rate.sleep();
 
-        // If total time is elapsed, finish driving
-        done = t > T;
+        // Finish driving if arrived
+        done = x >= xf;
     }
 
     // To be sure that robot is stopped
