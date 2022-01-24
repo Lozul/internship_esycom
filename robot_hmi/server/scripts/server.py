@@ -79,7 +79,7 @@ def main():
     server.listen(1)
 
     # Init ROS node
-    use_routine = False
+    use_routine = True
     rospy.init_node("server", anonymous=True)
 
     # Init signal generator

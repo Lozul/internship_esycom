@@ -109,7 +109,9 @@ int main(int argc, char **argv)
             current_step = 0;
 
             report_file.close();
-
+            sleep(2);
+            report_file = std::ofstream("/home/husarion/robot_reports/report.csv", std::ofstream::trunc); 
+            report_file << "angle,laser,encoders" << std::endl;
         }
         else if (!execute_routine && current_step != 0)
         {

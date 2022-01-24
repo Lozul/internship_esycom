@@ -51,7 +51,6 @@ float RobotDriver::correct_angle()
         }
 
         correction = srv.response.angle;
-        ROS_INFO("%f", correction);
 
         if (std::abs(correction) >= correction_threshold_)
         {
