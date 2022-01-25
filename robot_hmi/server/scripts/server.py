@@ -69,6 +69,10 @@ def pub_routine(routine):
     set_routine.publish(routine)
     start_routine.publish(True)
 
+def callback(msg, conn):
+    print ':: Signaling to client that robot just finished a step'
+    conn.sendall("STEP")
+
 def main():
     # Setup python server
     HOST, PORT = "0.0.0.0", 9999
@@ -117,6 +121,8 @@ def main():
     conn, addr = server.accept()
     print '-> Connected by', addr
 
+    rospy.Subscriber("routine_progress", UInt8, callback, conn)
+
     while 1:
         data = conn.recv(1024)
         if not data: break
@@ -137,6 +143,9 @@ def main():
             print ':: Waiting for routine to end...'
             while rospy.wait_for_message('routine_progress', UInt8).data != routine.nb_steps and routine.nb_steps != 0:
                 continue
+        else:
+            print("Waiting...")
+            raw_input()
 
         report = ""
         with open("/home/husarion/robot_reports/report.csv", mode='r') as f:
