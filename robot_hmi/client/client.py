@@ -114,7 +114,7 @@ class App(ttk.Frame):
             child.grid(padx=5, pady=5)
 
     def send_routine(self):
-        # TODO: adapt entry value to what the API of the generator wants
+        # TODO: fix power_level
         if not self.lock.acquire(blocking=False):
             messagebox.showinfo(message="A routine is in progress")
             return
@@ -135,14 +135,18 @@ class App(ttk.Frame):
 
         self.socket.sendall(data)
 
-        threading.Thread(None, self.get_report).start()
+        threading.Thread(None, self.parse_responses).start()
 
-    def get_report(self):
-        # TODO: loop to be sure we received all data
-        report = self.socket.recv(2048)
-        report = report.decode("utf-8")
+    def parse_responses(self):
+        while True:
+            msg = self.socket.recv(2048)
+            msg = msg.decode("utf-8")
 
-        print(f"Received report")
+            if msg == "STEP":
+                print("Robot finished a step")
+            else:
+                print("Received report")
+                break
 
         filename = filedialog.asksaveasfilename(defaultextension=".csv",
                 filetypes=[("CSV", "*.csv"), ("All files", "*")])
@@ -151,7 +155,7 @@ class App(ttk.Frame):
             filename = "last_unsaved_report.csv"
 
         with open(filename, mode="w") as f:
-            f.write(report)
+            f.write(msg)
 
         self.lock.release()
         self.progress.stop()
