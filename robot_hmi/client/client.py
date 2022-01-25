@@ -1,5 +1,6 @@
 #! /usr/bin/env python3
 from math import floor
+from pathlib import Path
 import threading
 import pickle
 import socket
@@ -11,16 +12,19 @@ from tkinter import ttk
 from tkinter import messagebox
 from tkinter import filedialog
 
+import pyvisa
+
 
 PORT = 9999
 
 
 class App(ttk.Frame):
-    def __init__(self, root, ipVar, sock):
+    def __init__(self, root, ipVar, sock, pna):
         ttk.Frame.__init__(self, root)
 
         self.ipVar = ipVar
         self.socket = sock
+        self.pna = pna
 
         self.lock = threading.Lock()
 
@@ -135,27 +139,32 @@ class App(ttk.Frame):
 
         self.socket.sendall(data)
 
+        self.log_dir = f"routine_reports/{floor(time.time())}"
+        Path(self.log_dir).mkdir(parents=True, exist_ok=True)
+
         threading.Thread(None, self.parse_responses).start()
 
     def parse_responses(self):
-        while True:
+        done = False
+        step = 1
+
+        while not done:
             msg = self.socket.recv(2048)
             msg = msg.decode("utf-8")
 
             if msg == "STEP":
                 print("Robot finished a step")
+                filename = f"{self.log_dir}/pna_{step}.csv"
+                step += 1
+
+                msg = self.pna.query("calc1:data? fdata").replace(',', '\n')
             else:
                 print("Received report")
-                break
+                filename = f"{self.log_dir}/robot.csv"
+                done = True
 
-        filename = filedialog.asksaveasfilename(defaultextension=".csv",
-                filetypes=[("CSV", "*.csv"), ("All files", "*")])
-
-        if not filename:
-            filename = "last_unsaved_report.csv"
-
-        with open(filename, mode="w") as f:
-            f.write(msg)
+            with open(filename, mode="w") as f:
+                f.write(msg)
 
         self.lock.release()
         self.progress.stop()
@@ -219,18 +228,57 @@ class AskIP(Toplevel):
         quit()
 
 
+def setup_pna():
+    rm = pyvisa.ResourceManager()
+    pna = rm.open_resource("TCPIP0::192.168.87.82::5025::SOCKET")
+    pna.write_termination, pna.read_termination = "\n", "\n"
+
+    pna_id = pna.query("*idn?")
+    print(f"Connected to {pna_id}")
+
+    # Reset
+    pna.write("*rst; status:preset; *cls")
+
+    # Modifying default measure for our needs
+    name = pna.query("calc1:par:cat?").replace('"', '').split(",")[0]
+    pna.write(f"calc1:par:sel {name}")
+    pna.write("calc1:par:mod:ext 'B,2'")
+
+    # Set center frequence and span
+    pna.write(f"sens1:freq:cent {6e9}")
+    pna.write(f"sens1:freq:span {10e6}")
+
+    # Set IF Bandwidth
+    pna.write(f"sens1:bwid {3.5e4}")
+
+    # Set nb points
+    pna.write(f"sens1:swe:poin 201")
+
+    return pna
+
+
 def main():
+    # Tkinter setup
     root = Tk()
     root.title("Robot GUI")
 
     ipVar = StringVar(value="0.0.0.0")
 
+    # Setup PNA
+    pna = setup_pna()
+
+    # Socket for connection with the robot
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    App(root, ipVar, sock)
+    # Build GUI
+    App(root, ipVar, sock, pna)
     AskIP(root, ipVar, sock)
     
+    # Loop
     root.mainloop()
+
+    # Cleanup
+    pna.close()
 
 
 if __name__ == "__main__":
