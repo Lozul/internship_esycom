@@ -157,8 +157,10 @@ Distance RobotDriver::drive(float distance)
     float x = 0;
     float xf = distance;
 
+    // Max speed to be reached
     float cruise_speed = std::min(xf / 2, max_speed_);
 
+    // Loop frequency
     float frequency = 100;
 
     bool done = false;

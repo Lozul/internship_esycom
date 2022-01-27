@@ -2,6 +2,8 @@
 
 > A set of packages developped for the ESYCOM laboratory to use the ROSBot 2.0 pro of [Husarion](https://husarion.com/)
 
+[TOC]
+
 ## Description
 
 The project is composed of 3 packages:
@@ -12,8 +14,8 @@ The project is composed of 3 packages:
 The main objective is to precisely control the robot to perform measurements semi-automatically to study wireless systems operating close to the ground.
 
 Documentation can be found here:
-- RobotDriver for driving methods
-- get_correction_server for correction calculations
+- RobotDriver for driving methods and Routine for settings
+- \subpage GetCorrectionExplained for correction calculations
 
 ## Usage
 
