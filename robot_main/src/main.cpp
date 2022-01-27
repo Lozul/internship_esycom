@@ -1,12 +1,15 @@
 #include <unistd.h>
 #include <string>
+#include <fstream>
+#include <experimental/filesystem>
 #include <ros/ros.h>
 #include <std_msgs/Bool.h>
 #include <dynamic_reconfigure/server.h>
 #include <robot_main/GlobalConfig.h>
 #include "robot_driver/robot_driver.h"
 #include "robot_main/Routine.h"
-#include "LMShid.h"
+
+namespace fs = std::experimental::filesystem;
 
 robot_main::Routine routine;
 bool execute_routine = false;
@@ -22,12 +25,18 @@ void set_routine_callback(const robot_main::RoutineConstPtr &msg)
     
     routine.nb_steps = msg->nb_steps;
     routine.step_distance = msg->step_distance;
-    routine.frequency = msg->frequency;
+    routine.freq_start = msg->freq_start;
+    routine.freq_end = msg->freq_end;
     routine.power_level = msg->power_level;
+    routine.time = msg->time;
+    routine.sweep = msg->sweep;
 }
 
 void start_routine_callback(const std_msgs::Bool &msg)
 {
+    if (msg.data)
+        ROS_INFO("Starting routine");
+
     execute_routine = msg.data;
 }
 
@@ -38,9 +47,6 @@ void button_callback(const std_msgs::UInt8 &msg)
 
 int main(int argc, char **argv)
 {
-    fnLMS_Init();
-    fnLMS_SetTestMode(false);
-
     // ROS init
     ros::init(argc, argv, "robot_main_node");
     ros::NodeHandle nh("~");
@@ -49,12 +55,6 @@ int main(int argc, char **argv)
 
     // RobotDriver init
     RobotDriver rd(nh);
-
-    // Routine init
-    routine.nb_steps = 0;
-    routine.step_distance = 0.0;
-    routine.frequency = 0;
-    routine.power_level = 0;
 
     // Subscribers
     // ros::Subscriber sub_buttons = nh.subscribe("/buttons", 1, &RobotDriver::button_input, &rd);
@@ -72,35 +72,9 @@ int main(int argc, char **argv)
     f = boost::bind(&reconfigure, _1, _2, boost::ref(rd));
     server.setCallback(f);
 
-    std::string report_folder = "/home/husarion/ros_workspace/reports/";
-    std::string after_correction_suffix = "_after";
-    std::string extension = ".csv";
-
-    // LMS device
-    DEVID generator_id;
-    int status = 0;
-
-    int nb_plugged = fnLMS_GetNumDevices();
-    bool use_generator = nb_plugged == 1;
-
-    if (nb_plugged == 0)
-        ROS_WARN("RobotMain: no Vaunix LMS devices located.");
-
-    if (use_generator)
-    {
-        DEVID active_devices[MAXDEVICES];
-
-        fnLMS_GetDevInfo(active_devices);
-        generator_id = active_devices[0];
-
-        status = fnLMS_InitDevice(generator_id);
-        ROS_INFO("RobotMain: generator status: %s", fnLMS_perror(status));
-
-        sleep(1);
-
-        status = fnLMS_SetRFOn(generator_id, false);
-        ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
-    }
+    // Report
+    std::ofstream report_file("/home/husarion/robot_reports/report.csv", std::ofstream::trunc); 
+    report_file << "angle,laser,encoders" << std::endl;
 
     // Main loop
     int current_step = 0;
@@ -113,30 +87,11 @@ int main(int argc, char **argv)
         {
             ROS_INFO("RobotMain: === Routine step %i ===", current_step + 1);
 
-            rd.correct_angle();
+            float current_angle = rd.correct_angle();
 
-            if (use_generator)
-            {
-                ROS_INFO("RobotMain: routine step %i, emit frequency %i", current_step + 1, routine.frequency);
+            Distance dist = rd.drive(routine.step_distance);
 
-                status = fnLMS_SetPowerLevel(generator_id, routine.power_level);
-                ROS_INFO("RobotMain: SetPowerLevel: %s", fnLMS_perror(status));
-
-                status = fnLMS_SetFrequency(generator_id, routine.frequency);
-                ROS_INFO("RobotMain: SetFrequency: %s", fnLMS_perror(status));
-
-                status = fnLMS_SetRFOn(generator_id, true);
-                ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
-
-                sleep(2);
-
-                status = fnLMS_SetRFOn(generator_id, false);
-                ROS_INFO("RobotMain: SetRFOn: %s", fnLMS_perror(status));
-
-                ROS_DEBUG("RobotMain: routine step %i, driving to next stop", current_step + 1);
-            }
-
-            rd.drive(routine.step_distance);
+            report_file << current_angle << "," << dist.laser << "," << dist.encoders << std::endl;
 
             ROS_INFO("RobotMain: step %i done", current_step + 1);
 
@@ -146,24 +101,23 @@ int main(int argc, char **argv)
             msg.data = current_step;
             pub_routine_progress.publish(msg);
 
-            sleep(1);
+            sleep(3);
         }
-        else if (current_step == routine.nb_steps)
+        else if (execute_routine && current_step == routine.nb_steps)
         {
             execute_routine = false;
             current_step = 0;
+
+            report_file.close();
+            sleep(3);
+            report_file = std::ofstream("/home/husarion/robot_reports/report.csv", std::ofstream::trunc); 
+            report_file << "angle,laser,encoders" << std::endl;
         }
         else if (!execute_routine && current_step != 0)
         {
             // In case of stop from GUI, TODO: be able choose between "pause" or "stop" the routine
             current_step = 0;
         }
-    }
-    
-    if (use_generator)
-    {
-        status = fnLMS_CloseDevice(generator_id);
-        ROS_DEBUG("RobotMain: generator status: %s", fnLMS_perror(status));
     }
 
     return 0;

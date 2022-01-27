@@ -27,11 +27,8 @@ RobotDriver::RobotDriver(ros::NodeHandle nh)
     }
 }
 
-bool RobotDriver::correct_angle()
+float RobotDriver::correct_angle()
 {
-    // Init report
-    bool success = false;
-
     float correction = 1;
     float total_correction = 0;
 
@@ -45,12 +42,12 @@ bool RobotDriver::correct_angle()
         if (!ros::service::call("get_correction", srv))
         {
             ROS_ERROR("Failed to call service get_correction");
-            return success;
+            return 0;
         }
         else if (!srv.response.success)
         {
             ROS_ERROR("get_correction service failed");
-            return success;
+            return 0;
         }
 
         correction = srv.response.angle;
@@ -64,8 +61,7 @@ bool RobotDriver::correct_angle()
 
     ROS_INFO("RobotDriver: correction made or no correction to be made (%.3f rad)", total_correction);
 
-    success = true;
-    return success;
+    return correction;
 }
 
 bool RobotDriver::turn(bool clockwise, float radians)
@@ -95,22 +91,21 @@ bool RobotDriver::turn(bool clockwise, float radians)
     ros::Rate rate(100);
     bool done = false;
     double angle_turned = 0.0;
-    while (!done && nh_.ok())
+    while (angle_turned < radians && !done && nh_.ok())
     {
         // Determine speed
         angle_turned = fabs(angle_turned);
-        move.angular.z = 1e-2; // Default speed for startup
+        move.angular.z = 2 * cruise_speed * (1e-2 / radians); // Default speed for startup
 
         // The "magic numbers" where found by experience
         //  bellow 1e-2 we will apply the startup speed,
         //  then we will increase until halfway through, then decrease
         if (1e-2 < angle_turned && angle_turned < radians / 2)
-            move.angular.z = (1/0.495) * cruise_speed * (angle_turned / radians);
+            move.angular.z = 2 * cruise_speed * (angle_turned / radians);
         else if (radians / 2 <= angle_turned && angle_turned < radians)
-            move.angular.z = (1/0.495) * cruise_speed * (1 - angle_turned / radians);
+            move.angular.z = 2 * cruise_speed * (1 - angle_turned / radians);
 
         move.angular.z *= clockwise ? -1 : 1;
-        ROS_INFO("Speed: %f", move.angular.z);
 
         // Send the drive command
         pub_cmd_vel_.publish(move);
@@ -142,8 +137,7 @@ bool RobotDriver::turn(bool clockwise, float radians)
         if (actual_turn_axis.dot(desired_turn_axis) < 0)
             angle_turned = 2 * M_PI - angle_turned;
 
-        if (angle_turned >= radians)
-            done = true;
+        done = angle_turned >= radians;
     }
 
     ROS_INFO("Angle turned: %f", angle_turned);
@@ -154,25 +148,21 @@ bool RobotDriver::turn(bool clockwise, float radians)
     return done;
 }
 
-float RobotDriver::drive(float distance)
+Distance RobotDriver::drive(float distance)
 {
-    // Note: currently using time to determine speed, should use
-    //  traveled distance as measured by the laser.
+    // Record starting position
+    Distance start = getTargetDistance();
 
-    // Distance to travel, with error margin
-    float xf = distance * error_margin_;
+    // Drive settings
+    float x = 0;
+    float xf = distance;
 
     // Max speed to be reached
     float cruise_speed = std::min(xf / 2, max_speed_);
 
-    // Total travel time
-    float T = 1.5 * (xf / cruise_speed);
-
     // Loop frequency
     float frequency = 100;
-    float time_step = 1.0 / frequency;
 
-    float t = 0;
     bool done = false;
 
     // ROS
@@ -181,32 +171,64 @@ float RobotDriver::drive(float distance)
 
     while (!done && nh_.ok())
     {
-        // Determining speed based on elapsed time 
-        if (0 <= t && t < T / 3)
-            move.linear.x = (3 * cruise_speed * t) / T;
-        else if (T / 3 <= t && t < 2 * T / 3)
-            move.linear.x = cruise_speed;
-        else if (2 * T / 3 <= t <= T)
-            move.linear.x = 3 * cruise_speed * (1 - t / T);
+        // Determining speed
+        move.linear.x = 2 * cruise_speed * (1e-3 / xf); // Startup speed
+
+        if (1e-3 <= x && x < xf / 2)
+            move.linear.x = 2 * cruise_speed * (x / xf);
+        else if (xf / 2 <= x && x <= xf)
+            move.linear.x = 2 * cruise_speed * (1 - x / xf);
 
         pub_cmd_vel_.publish(move);
 
-        // Increasing time counter
-        t += time_step;
+        // Get current traveled distance
+        x = start.laser - getTargetDistance().laser;
 
         // Pause
         rate.sleep();
 
-        // If total time is elapsed, finish driving
-        done = t > T;
+        // Finish driving if arrived
+        done = x >= xf;
     }
 
     // To be sure that robot is stopped
     move.linear.x = 0;
     pub_cmd_vel_.publish(move);
 
-    // TODO: return traveled distance (using laser?)
-    return 0;
+    // Record final position
+    Distance res = getTargetDistance();
+
+    // Return traveled distance
+    res.encoders -= start.encoders;
+    res.laser = start.laser - res.laser;
+
+    return res;
+}
+
+Distance getTargetDistance()
+{
+    Distance res;
+
+    auto msg = ros::topic::waitForMessage<geometry_msgs::PoseStamped>("/pose");
+    res.encoders = msg->pose.position.x;
+
+    while (true)
+    {
+        auto msg = ros::topic::waitForMessage<sensor_msgs::LaserScan>("/scan");
+        int len = sizeof(msg->ranges) / sizeof(msg->ranges[0]);
+
+        float a = msg->ranges[0];
+        float b = msg->ranges[len - 1];
+
+        if ((a < msg->range_min || a > msg->range_max)
+                || (b < msg->range_min || b > msg->range_max))
+            continue;
+
+        res.laser = (a + b) / 2;
+        break;
+    }
+
+    return res;
 }
 
 void sayHello()

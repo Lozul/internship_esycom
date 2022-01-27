@@ -8,9 +8,10 @@
 
     <include file="$(find rplidar_ros)/launch/rplidar_a3.launch" />
 
-    <node pkg="tf" type="static_transform_publisher" name="laser_broadcaster" args="0 0 0.1 3.14 0 0 base_link laser 100" />
+    <node pkg="tf" type="static_transform_publisher" name="laser_broadcaster" args="0 0 0.2 3.14 0 0 base_link laser 100" />
 
     <node pkg="robot_main" type="robot_main_node" name="robot_main_node" output="screen" required="true"/>
     <node pkg="robot_driver" type="get_correction_server.py" name="get_correction_server" output="screen" required="true" />
-    <node pkg="robot_gui" type="start" name="robot_gui" output="screen" required="true"/>
+    <node pkg="server" type="server.py" name="server" output="screen" required="true"/>
+    <!-- <node pkg="robot_gui" type="start" name="robot_gui" output="screen" required="true"/> -->
 </launch>
