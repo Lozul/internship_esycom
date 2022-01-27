@@ -27,7 +27,7 @@ var NAVTREE =
   [ "LATSA", "index.html", [
     [ "ROS packages for the ESYCOM laboratory", "index.html", [
       [ "Description", "index.html#autotoc_md1", null ],
-      [ "Instalation", "index.html#autotoc_md2", null ],
+      [ "Installation", "index.html#autotoc_md2", null ],
       [ "Usage", "index.html#autotoc_md3", [
         [ "1. Connection with the robot", "index.html#autotoc_md4", [
           [ "1.1 Access the robot", "index.html#autotoc_md5", null ],
@@ -46,6 +46,9 @@ var NAVTREE =
       [ "Credits", "index.html#autotoc_md15", null ]
     ] ],
     [ "How correction is determined", "md_robot_driver_scripts_help.html", null ],
+    [ "Namespaces", "namespaces.html", [
+      [ "Namespace List", "namespaces.html", "namespaces_dup" ]
+    ] ],
     [ "Classes", "annotated.html", [
       [ "Class List", "annotated.html", "annotated_dup" ],
       [ "Class Index", "classes.html", null ],

@@ -19,9 +19,18 @@ Documentation can be found here:
 - RobotDriver for driving methods and Routine for settings
 - \subpage GetCorrectionExplained for correction calculations
 
-## Instalation
+## Installation
 
-_client instalation_
+First, you will need [Python 3.6+](https://www.python.org/). Be sure to add Python to your PATH to use it from command line.
+
+To be able to control the PNA, we need to install 2 Python modules.
+Open a terminal and type the command `pip install pyvisa pyvisa-py`.
+
+You should now have everything you need to use the client, use your terminal to go in the folder where `client.py` is located.
+If you downloaded all the project, it should be here : `internship_esycom/robot_hmi/client/`.
+
+To start the client, type `python client.py`. On recent Windows, it might open the Windows Store page,
+check [this response](https://stackoverflow.com/a/58773979) to fix the isue.
 
 ## Usage
 

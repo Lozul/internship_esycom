@@ -98,7 +98,7 @@ $(document).ready(function(){initNavTree('index.html',''); initResizable(); });
 <div class="contents">
 <div class="toc"><h3>Table of Contents</h3>
 <ul><li class="level1"><a href="#autotoc_md1">Description</a></li>
-<li class="level1"><a href="#autotoc_md2">Instalation</a></li>
+<li class="level1"><a href="#autotoc_md2">Installation</a></li>
 <li class="level1"><a href="#autotoc_md3">Usage</a><ul><li class="level2"><a href="#autotoc_md4">1. Connection with the robot</a><ul><li class="level3"><a href="#autotoc_md5">1.1 Access the robot</a></li>
 <li class="level3"><a href="#autotoc_md6">1.2 Connect to wifi</a></li>
 <li class="level3"><a href="#autotoc_md7">1.3 Get Robot IP address</a></li>
@@ -137,8 +137,11 @@ Description</h1>
 <li><a class="el" href="md_robot_driver_scripts_help.html#GetCorrectionExplained">GetCorrectionExplained</a> for correction calculations</li>
 </ul>
 <h1><a class="anchor" id="autotoc_md2"></a>
-Instalation</h1>
-<p ><em>client instalation</em></p>
+Installation</h1>
+<p >First, you will need <a href="https://www.python.org/">Python 3.6+</a>. Be sure to add Python to your PATH to use it from command line.</p>
+<p >To be able to control the PNA, we need to install 2 Python modules. Open a terminal and type the command <code>pip install pyvisa pyvisa-py</code>.</p>
+<p >You should now have everything you need to use the client, use your terminal to go in the folder where <code>client.py</code> is located. If you downloaded all the project, it should be here : <code>internship_esycom/robot_hmi/client/</code>.</p>
+<p >To start the client, type <code>python client.py</code>. On recent Windows, it might open the Windows Store page, check <a href="https://stackoverflow.com/a/58773979">this response</a> to fix the isue.</p>
 <h1><a class="anchor" id="autotoc_md3"></a>
 Usage</h1>
 <blockquote class="doxtable">
