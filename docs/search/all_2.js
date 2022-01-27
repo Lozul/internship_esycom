@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['frequency_0',['frequency',['../struct_routine.html#ac8658996fde705ab9b72e82bedc390bc',1,'Routine']]]
+  ['distance_0',['Distance',['../struct_distance.html',1,'']]],
+  ['drive_1',['drive',['../class_robot_driver.html#a4ca5eb71c03976b93dd0afa426bdf6d3',1,'RobotDriver']]]
 ];

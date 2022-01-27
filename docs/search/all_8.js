@@ -1,4 +1,8 @@
 var searchData=
 [
-  ['turn_0',['turn',['../class_robot_driver.html#a046aee71252da2b9601675bab8fecfa2',1,'RobotDriver']]]
+  ['set_5fcorrection_5fthreshold_0',['set_correction_threshold',['../class_robot_driver.html#a333109df2e983b03f765a44aed5c6448',1,'RobotDriver']]],
+  ['setuppna_1',['SetupPNA',['../classclient_1_1_setup_p_n_a.html',1,'client']]],
+  ['spinbox_2',['Spinbox',['../classrobot__gui_1_1gui_1_1_spinbox.html',1,'robot_gui::gui']]],
+  ['step_5fdistance_3',['step_distance',['../struct_routine.html#abcac3dc5ea54a279c5040084bb9f4f7c',1,'Routine']]],
+  ['steps_4',['steps',['../struct_routine.html#a0cc8017e61ac19ac59b8ff75915b6c48',1,'Routine']]]
 ];

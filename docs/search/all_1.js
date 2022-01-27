@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['drive_0',['drive',['../class_robot_driver.html#a9055c8f17997035229541713b45c259c',1,'RobotDriver']]]
+  ['correct_5fangle_0',['correct_angle',['../class_robot_driver.html#a764c0796a5d1b298686dc7a8e144d443',1,'RobotDriver']]]
 ];

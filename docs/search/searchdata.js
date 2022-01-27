@@ -1,7 +1,7 @@
 var indexSectionsWithContent =
 {
-  0: "cdfghprst",
-  1: "r",
+  0: "acdfghprst",
+  1: "adgrs",
   2: "r",
   3: "cdgrst",
   4: "fps",
