@@ -16,15 +16,19 @@ import pyvisa
 
 
 PORT = 9999
+RM = pyvisa.ResourceManager()
+VALID_IP = "(\A25[0-5]|\A2[0-4][0-9]|\A[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
 
 
 class App(ttk.Frame):
-    def __init__(self, root, ipVar, sock, pna):
+    def __init__(self, root):
         ttk.Frame.__init__(self, root)
 
-        self.ipVar = ipVar
-        self.socket = sock
-        self.pna = pna
+        self.robot_ip = StringVar(value="0.0.0.0")
+        self.pna_ip = StringVar(value="0.0.0.0")
+
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.pna = None
 
         self.lock = threading.Lock()
 
@@ -37,9 +41,17 @@ class App(ttk.Frame):
         self.time = IntVar(value=500)
         self.sweep = BooleanVar(value=False)
 
+        self.pna_freq_cent = IntVar(value=int(6e9))
+        self.pna_freq_span = IntVar(value=int(10e6))
+        self.pna_bandwidth = IntVar(value=int(3.5e4))
+        self.pna_nb_points = IntVar(value=201)
+
         self.create_widgets()
 
         self.grid(column=0, row=0, padx=12, pady=12)
+
+        SetupPNA(self)
+        AskIP(self)
 
     def create_widgets(self):
         # Label frames
@@ -144,6 +156,25 @@ class App(ttk.Frame):
 
         threading.Thread(None, self.parse_responses).start()
 
+    def setup_pna(self):
+        # Reset
+        self.pna.write("*rst; status:preset; *cls")
+
+        # Modifying default measure for our needs
+        name = self.pna.query("calc1:par:cat?").replace('"', '').split(",")[0]
+        self.pna.write(f"calc1:par:sel {name}")
+        self.pna.write("calc1:par:mod:ext 'B,2'")
+
+        # Set center frequence and span
+        self.pna.write(f"sens1:freq:cent {6e9}")
+        self.pna.write(f"sens1:freq:span {10e6}")
+
+        # Set IF Bandwidth
+        self.pna.write(f"sens1:bwid {3.5e4}")
+
+        # Set nb points
+        self.pna.write(f"sens1:swe:poin {201}")
+
     def parse_responses(self):
         done = False
         step = 1
@@ -171,12 +202,11 @@ class App(ttk.Frame):
 
 
 class AskIP(Toplevel):
-    def __init__(self, parent, ipVar, sock):
+    def __init__(self, parent):
         Toplevel.__init__(self, parent)
         self.title("Robot IP")
 
-        self.ipVar = ipVar
-        self.socket = sock
+        self.parent = parent
 
         self.create_widgets()
 
@@ -186,10 +216,13 @@ class AskIP(Toplevel):
         self.wait_window()
 
     def create_widgets(self):
-        ttk.Label(self, text="Enter Robot IP:").grid()
-
         vcmd = (self.register(self.valid_entry), "%S")
-        ttk.Entry(self, textvariable=self.ipVar, validate="key", validatecommand=vcmd).grid()
+
+        ttk.Label(self, text="Enter Robot IP:").grid()
+        ttk.Entry(self, textvariable=self.parent.robot_ip, validate="key", validatecommand=vcmd).grid()
+
+        ttk.Label(self, text="Enter PNA IP:").grid()
+        ttk.Entry(self, textvariable=self.parent.pna_ip, validate="key", validatecommand=vcmd).grid()
 
         ttk.Button(self, text='OK', command=self.valid_ip).grid()
 
@@ -200,24 +233,43 @@ class AskIP(Toplevel):
         return re.match("[.0-9]", S) is not None
 
     def valid_ip(self):
-        ip = self.ipVar.get()
-        v = re.fullmatch("(\A25[0-5]|\A2[0-4][0-9]|\A[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}", ip)
+        robot_ip = self.parent.robot_ip.get()
+        pna_ip = self.parent.pna_ip.get()
 
-        if v is not None and self.connect_to_ip():
-            self.dismiss()
+        if not re.fullmatch(VALID_IP, robot_ip):
+            messagebox.showerror(message="Please enter a valid IP address for robot", title="Invalid Robot IP")
+        elif not re.fullmatch(VALID_IP, robot_ip):
+            messagebox.showerror(message="Please enter a valid IP address for PNA", title="Invalid PNA IP")
+        elif not self.connect_to_server():
+            messagebox.showerror(message="Can not connect to server with this IP", title="Invalid Robot IP")
+        elif not self.connect_to_pna():
+            messagebox.showerror(message="Can not connect to PNA with this IP", title="Invalid PNA IP")
         else:
-            messagebox.showerror(message="Please enter a valid IP address", title="Invalid IP")
+            self.dismiss()        
+            
 
-    def connect_to_ip(self):
-        ip = self.ipVar.get()
+    def connect_to_server(self):
+        ip = self.parent.robot_ip.get()
         try:
-            self.socket.connect((ip, PORT))
-        except (TimeoutError, ConnectionRefusedError):
+            self.parent.socket.connect((ip, PORT))
+        except:
             print(f"Can't connect to {ip} on port {PORT}")
             return False
 
         return True
 
+    def connect_to_pna(self):
+        ip = self.parent.pna_ip.get()
+        self.parent.pna = RM.open_resource(f"TCPIP0::{ip}::5025::SOCKET")
+
+        try:
+            pna.write_termination, pna.read_termination = "\n", "\n"
+            response = pna.query("*idn?")
+            print(f"Connect to PNA: {response}")
+        except:
+            return False
+
+        return True
 
     def dismiss(self):
         self.grab_release()
@@ -228,33 +280,51 @@ class AskIP(Toplevel):
         quit()
 
 
-def setup_pna():
-    rm = pyvisa.ResourceManager()
-    pna = rm.open_resource("TCPIP0::192.168.87.82::5025::SOCKET")
-    pna.write_termination, pna.read_termination = "\n", "\n"
+class SetupPNA(Toplevel):
+    def __init__(self, parent):
+        Toplevel.__init__(self, parent)
+        self.title("PNA Setup")
 
-    pna_id = pna.query("*idn?")
-    print(f"Connected to {pna_id}")
+        self.parent = parent
 
-    # Reset
-    pna.write("*rst; status:preset; *cls")
+        self.create_widgets()
 
-    # Modifying default measure for our needs
-    name = pna.query("calc1:par:cat?").replace('"', '').split(",")[0]
-    pna.write(f"calc1:par:sel {name}")
-    pna.write("calc1:par:mod:ext 'B,2'")
+    def create_widgets(self):
+        ttk.Label(self, text="Center frequence (Hz)").grid()
+        ttk.Entry(self, textvariable=self.parent.pna_freq_cent).grid()
 
-    # Set center frequence and span
-    pna.write(f"sens1:freq:cent {6e9}")
-    pna.write(f"sens1:freq:span {10e6}")
+        ttk.Label(self, text="Span frequence (Hz)").grid()
+        ttk.Entry(self, textvariable=self.parent.pna_freq_span).grid()
 
-    # Set IF Bandwidth
-    pna.write(f"sens1:bwid {3.5e4}")
+        ttk.Label(self, text="IF Bandwidth (Hz)").grid()
+        ttk.Entry(self, textvariable=self.parent.pna_bandwidth).grid()
 
-    # Set nb points
-    pna.write(f"sens1:swe:poin 201")
+        ttk.Label(self, text="Nb points").grid()
+        ttk.Entry(self, textvariable=self.parent.pna_nb_points).grid()
 
-    return pna
+        ttk.Button(self, text="Apply", command=self.apply_setup).grid()
+
+        for child in self.winfo_children():
+            child.grid(padx=25, pady=5)
+
+    def apply_setup(self):
+        # Reset
+        pna.write("*rst; status:preset; *cls")
+
+        # Modifying default measure for our needs
+        name = pna.query("calc1:par:cat?").replace('"', '').split(",")[0]
+        pna.write(f"calc1:par:sel {name}")
+        pna.write("calc1:par:mod:ext 'B,2'")
+
+        # Set center frequence and span
+        pna.write(f"sens1:freq:cent {self.parent.pna_freq_cent.get()}")
+        pna.write(f"sens1:freq:span {self.parent.pna_freq_span.get()}")
+
+        # Set IF Bandwidth
+        pna.write(f"sens1:bwid {self.parent.pna_bandwidth.get()}")
+
+        # Set nb points
+        pna.write(f"sens1:swe:poin {self.parent.pna_nb_points.get()}")
 
 
 def main():
@@ -262,23 +332,11 @@ def main():
     root = Tk()
     root.title("Robot GUI")
 
-    ipVar = StringVar(value="0.0.0.0")
-
-    # Setup PNA
-    pna = setup_pna()
-
-    # Socket for connection with the robot
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
     # Build GUI
-    App(root, ipVar, sock, pna)
-    AskIP(root, ipVar, sock)
+    App(root)
     
     # Loop
     root.mainloop()
-
-    # Cleanup
-    pna.close()
 
 
 if __name__ == "__main__":
