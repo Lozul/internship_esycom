@@ -1,4 +1,18 @@
 #! /usr/bin/env python
+
+"""Server to receive routine from a client (Python 2).
+
+This module transmit routine from a client to the other modules.
+It is also in charge of controlling the generator.
+
+If you are searching examples of commands for the generator,
+look at the function `setup_generator()`.
+
+Ressources for programming the generator:
+- Manual of the LMS API (ask Benoit Poussot or Shermila Mostarshedi
+for the USB stick that comes with the generator).
+"""
+
 from ctypes import *
 from time import sleep
 import socket

@@ -1,4 +1,18 @@
 #! /usr/bin/env python3
+
+""" Client to connect to the robot server (Python 3).
+
+This soft connect to the robot server to send routine for the robot to execute.
+It is also in charge of setuping the PNA.
+
+If you are searching examples of commands for the PNA,
+look at the method `SetupPna.apply_setup()`.
+
+Ressources for programming the PNA :
+- Manual of the PNA-E8361C (ask Benoit Poussot or Shermila Mostarshedi for it).
+- Report of Mohamed AÏCHI (ditto).
+"""
+
 from math import floor
 from pathlib import Path
 import threading
@@ -137,6 +151,7 @@ class App(ttk.Frame):
 
         self.progress.start(5)
 
+        # Prepare the data to be sent via the socket
         routine = {
             "nb_steps": self.nb_steps.get(),
             "step_distance": self.step_distance.get(),
@@ -149,11 +164,14 @@ class App(ttk.Frame):
 
         data = pickle.dumps(routine, protocol=0)
 
+        # Send the data
         self.socket.sendall(data)
 
+        # Create directory for reports
         self.log_dir = f"routine_reports/{floor(time.time())}"
         Path(self.log_dir).mkdir(parents=True, exist_ok=True)
 
+        # Launch a thread to parse the responses of the server
         threading.Thread(None, self.parse_responses).start()
 
     def setup_pna(self):

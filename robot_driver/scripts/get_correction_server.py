@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-"""Module which computes the angle to correct.
+"""Module which computes the angle to correct (Python 2).
 
 This module act as a server to which other module can do request
 to know the current angle to correct for the robot to be align with the target.
 
-See README.md in same directory for details.
+See help.md in same directory for details.
 """
 
 from math import cos, sin, atan
