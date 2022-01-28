@@ -31,6 +31,7 @@ float RobotDriver::correct_angle()
 {
     float correction = 1;
     float total_correction = 0;
+    int nb_correction = 0;
 
     ROS_INFO("Waiting for get_correction service");
     ros::service::waitForService("get_correction");
@@ -57,7 +58,9 @@ float RobotDriver::correct_angle()
             turn(correction < 0, std::abs(correction));
             total_correction += correction;
         }
-    } while (std::abs(correction) >= correction_threshold_);
+
+        nb_correction += 1;
+    } while (std::abs(correction) >= correction_threshold_ && nb_correction < 6);
 
     ROS_INFO("RobotDriver: correction made or no correction to be made (%.3f rad)", total_correction);
 
