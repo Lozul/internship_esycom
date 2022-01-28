@@ -256,7 +256,7 @@ class AskIP(Toplevel):
 
         if not re.fullmatch(VALID_IP, robot_ip):
             messagebox.showerror(message="Please enter a valid IP address for robot", title="Invalid Robot IP")
-        elif not re.fullmatch(VALID_IP, robot_ip):
+        elif not re.fullmatch(VALID_IP, pna_ip):
             messagebox.showerror(message="Please enter a valid IP address for PNA", title="Invalid PNA IP")
         elif not self.connect_to_server():
             messagebox.showerror(message="Can not connect to server with this IP", title="Invalid Robot IP")
