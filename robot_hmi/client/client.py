@@ -1,5 +1,20 @@
 #! /usr/bin/env python3
+
+""" Client to connect to the robot server (Python 3).
+
+This soft connect to the robot server to send routine for the robot to execute.
+It is also in charge of setuping the PNA.
+
+If you are searching examples of commands for the PNA,
+look at the method `SetupPna.apply_setup()`.
+
+Ressources for programming the PNA :
+- Manual of the PNA-E8361C (ask Benoit Poussot or Shermila Mostarshedi for it).
+- Report of Mohamed AÏCHI (ditto).
+"""
+
 from math import floor
+from pathlib import Path
 import threading
 import pickle
 import socket
@@ -11,16 +26,23 @@ from tkinter import ttk
 from tkinter import messagebox
 from tkinter import filedialog
 
+import pyvisa
+
 
 PORT = 9999
+RM = pyvisa.ResourceManager()
+VALID_IP = "(\A25[0-5]|\A2[0-4][0-9]|\A[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}"
 
 
 class App(ttk.Frame):
-    def __init__(self, root, ipVar, sock):
+    def __init__(self, root):
         ttk.Frame.__init__(self, root)
 
-        self.ipVar = ipVar
-        self.socket = sock
+        self.robot_ip = StringVar(value="0.0.0.0")
+        self.pna_ip = StringVar(value="0.0.0.0")
+
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.pna = None
 
         self.lock = threading.Lock()
 
@@ -33,9 +55,17 @@ class App(ttk.Frame):
         self.time = IntVar(value=500)
         self.sweep = BooleanVar(value=False)
 
+        self.pna_freq_cent = IntVar(value=int(6e9))
+        self.pna_freq_span = IntVar(value=int(10e6))
+        self.pna_bandwidth = IntVar(value=int(3.5e4))
+        self.pna_nb_points = IntVar(value=201)
+
         self.create_widgets()
 
         self.grid(column=0, row=0, padx=12, pady=12)
+
+        SetupPNA(self)
+        AskIP(self)
 
     def create_widgets(self):
         # Label frames
@@ -121,6 +151,7 @@ class App(ttk.Frame):
 
         self.progress.start(5)
 
+        # Prepare the data to be sent via the socket
         routine = {
             "nb_steps": self.nb_steps.get(),
             "step_distance": self.step_distance.get(),
@@ -133,41 +164,67 @@ class App(ttk.Frame):
 
         data = pickle.dumps(routine, protocol=0)
 
+        # Send the data
         self.socket.sendall(data)
 
+        # Create directory for reports
+        self.log_dir = f"routine_reports/{floor(time.time())}"
+        Path(self.log_dir).mkdir(parents=True, exist_ok=True)
+
+        # Launch a thread to parse the responses of the server
         threading.Thread(None, self.parse_responses).start()
 
+    def setup_pna(self):
+        # Reset
+        self.pna.write("*rst; status:preset; *cls")
+
+        # Modifying default measure for our needs
+        name = self.pna.query("calc1:par:cat?").replace('"', '').split(",")[0]
+        self.pna.write(f"calc1:par:sel {name}")
+        self.pna.write("calc1:par:mod:ext 'B,2'")
+
+        # Set center frequence and span
+        self.pna.write(f"sens1:freq:cent {6e9}")
+        self.pna.write(f"sens1:freq:span {10e6}")
+
+        # Set IF Bandwidth
+        self.pna.write(f"sens1:bwid {3.5e4}")
+
+        # Set nb points
+        self.pna.write(f"sens1:swe:poin {201}")
+
     def parse_responses(self):
-        while True:
+        done = False
+        step = 1
+
+        while not done:
             msg = self.socket.recv(2048)
             msg = msg.decode("utf-8")
 
             if msg == "STEP":
                 print("Robot finished a step")
+                filename = f"{self.log_dir}/pna_{step}.csv"
+                step += 1
+
+                msg = self.pna.query("calc1:data? fdata").replace(',', '\n')
             else:
                 print("Received report")
-                break
+                filename = f"{self.log_dir}/robot.csv"
+                done = True
 
-        filename = filedialog.asksaveasfilename(defaultextension=".csv",
-                filetypes=[("CSV", "*.csv"), ("All files", "*")])
-
-        if not filename:
-            filename = "last_unsaved_report.csv"
-
-        with open(filename, mode="w") as f:
-            f.write(msg)
+            with open(filename, mode="w") as f:
+                f.write(msg)
 
         self.lock.release()
         self.progress.stop()
 
 
 class AskIP(Toplevel):
-    def __init__(self, parent, ipVar, sock):
+    def __init__(self, parent):
         Toplevel.__init__(self, parent)
         self.title("Robot IP")
 
-        self.ipVar = ipVar
-        self.socket = sock
+        self.parent = parent
 
         self.create_widgets()
 
@@ -177,10 +234,13 @@ class AskIP(Toplevel):
         self.wait_window()
 
     def create_widgets(self):
-        ttk.Label(self, text="Enter Robot IP:").grid()
-
         vcmd = (self.register(self.valid_entry), "%S")
-        ttk.Entry(self, textvariable=self.ipVar, validate="key", validatecommand=vcmd).grid()
+
+        ttk.Label(self, text="Enter Robot IP:").grid()
+        ttk.Entry(self, textvariable=self.parent.robot_ip, validate="key", validatecommand=vcmd).grid()
+
+        ttk.Label(self, text="Enter PNA IP:").grid()
+        ttk.Entry(self, textvariable=self.parent.pna_ip, validate="key", validatecommand=vcmd).grid()
 
         ttk.Button(self, text='OK', command=self.valid_ip).grid()
 
@@ -191,24 +251,43 @@ class AskIP(Toplevel):
         return re.match("[.0-9]", S) is not None
 
     def valid_ip(self):
-        ip = self.ipVar.get()
-        v = re.fullmatch("(\A25[0-5]|\A2[0-4][0-9]|\A[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}", ip)
+        robot_ip = self.parent.robot_ip.get()
+        pna_ip = self.parent.pna_ip.get()
 
-        if v is not None and self.connect_to_ip():
-            self.dismiss()
+        if not re.fullmatch(VALID_IP, robot_ip):
+            messagebox.showerror(message="Please enter a valid IP address for robot", title="Invalid Robot IP")
+        elif not re.fullmatch(VALID_IP, robot_ip):
+            messagebox.showerror(message="Please enter a valid IP address for PNA", title="Invalid PNA IP")
+        elif not self.connect_to_server():
+            messagebox.showerror(message="Can not connect to server with this IP", title="Invalid Robot IP")
+        elif not self.connect_to_pna():
+            messagebox.showerror(message="Can not connect to PNA with this IP", title="Invalid PNA IP")
         else:
-            messagebox.showerror(message="Please enter a valid IP address", title="Invalid IP")
+            self.dismiss()        
+            
 
-    def connect_to_ip(self):
-        ip = self.ipVar.get()
+    def connect_to_server(self):
+        ip = self.parent.robot_ip.get()
         try:
-            self.socket.connect((ip, PORT))
-        except (TimeoutError, ConnectionRefusedError):
+            self.parent.socket.connect((ip, PORT))
+        except:
             print(f"Can't connect to {ip} on port {PORT}")
             return False
 
         return True
 
+    def connect_to_pna(self):
+        ip = self.parent.pna_ip.get()
+        self.parent.pna = RM.open_resource(f"TCPIP0::{ip}::5025::SOCKET")
+
+        try:
+            pna.write_termination, pna.read_termination = "\n", "\n"
+            response = pna.query("*idn?")
+            print(f"Connect to PNA: {response}")
+        except:
+            return False
+
+        return True
 
     def dismiss(self):
         self.grab_release()
@@ -219,17 +298,62 @@ class AskIP(Toplevel):
         quit()
 
 
+class SetupPNA(Toplevel):
+    def __init__(self, parent):
+        Toplevel.__init__(self, parent)
+        self.title("PNA Setup")
+
+        self.parent = parent
+
+        self.create_widgets()
+
+    def create_widgets(self):
+        ttk.Label(self, text="Center frequence (Hz)").grid()
+        ttk.Entry(self, textvariable=self.parent.pna_freq_cent).grid()
+
+        ttk.Label(self, text="Span frequence (Hz)").grid()
+        ttk.Entry(self, textvariable=self.parent.pna_freq_span).grid()
+
+        ttk.Label(self, text="IF Bandwidth (Hz)").grid()
+        ttk.Entry(self, textvariable=self.parent.pna_bandwidth).grid()
+
+        ttk.Label(self, text="Nb points").grid()
+        ttk.Entry(self, textvariable=self.parent.pna_nb_points).grid()
+
+        ttk.Button(self, text="Apply", command=self.apply_setup).grid()
+
+        for child in self.winfo_children():
+            child.grid(padx=25, pady=5)
+
+    def apply_setup(self):
+        # Reset
+        pna.write("*rst; status:preset; *cls")
+
+        # Modifying default measure for our needs
+        name = pna.query("calc1:par:cat?").replace('"', '').split(",")[0]
+        pna.write(f"calc1:par:sel {name}")
+        pna.write("calc1:par:mod:ext 'B,2'")
+
+        # Set center frequence and span
+        pna.write(f"sens1:freq:cent {self.parent.pna_freq_cent.get()}")
+        pna.write(f"sens1:freq:span {self.parent.pna_freq_span.get()}")
+
+        # Set IF Bandwidth
+        pna.write(f"sens1:bwid {self.parent.pna_bandwidth.get()}")
+
+        # Set nb points
+        pna.write(f"sens1:swe:poin {self.parent.pna_nb_points.get()}")
+
+
 def main():
+    # Tkinter setup
     root = Tk()
     root.title("Robot GUI")
 
-    ipVar = StringVar(value="0.0.0.0")
-
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-    App(root, ipVar, sock)
-    AskIP(root, ipVar, sock)
+    # Build GUI
+    App(root)
     
+    # Loop
     root.mainloop()
 
 
