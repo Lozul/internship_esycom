@@ -65,7 +65,10 @@ Password is `husarion`.
 
 **University wifi, eduroam, can not be used here.**
 
-1. Turn on hotspot on the Android (https://support.google.com/android/answer/9059108?hl=fr)
+1. Turn on an **open hotspot** on the Android:
+    1. Open Settings > Connexions > Mobile hotspot and Tethering > Mobile hotspot
+    2. Tap on Configuration
+    3. Tap on Security and choose "Open", this way the PNA will be able to connect
 2. Connect the robot to the shared network with the command `nmtui`.
 3. Connect your computer to the hotspot.
 4. Plug the Wifi dongle in the PNA and connect it to the hotspot.
