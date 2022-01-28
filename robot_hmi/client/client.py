@@ -281,10 +281,11 @@ class AskIP(Toplevel):
         self.parent.pna = RM.open_resource(f"TCPIP0::{ip}::5025::SOCKET")
 
         try:
-            pna.write_termination, pna.read_termination = "\n", "\n"
-            response = pna.query("*idn?")
+            self.parent.pna.write_termination, self.parent.pna.read_termination = "\n", "\n"
+            response = self.parent.pna.query("*idn?")
             print(f"Connect to PNA: {response}")
-        except:
+        except Exception as e:
+            print(e)
             return False
 
         return True
@@ -326,6 +327,8 @@ class SetupPNA(Toplevel):
             child.grid(padx=25, pady=5)
 
     def apply_setup(self):
+        pna = self.parent.pna
+
         # Reset
         pna.write("*rst; status:preset; *cls")
 
